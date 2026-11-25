@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LifeOS – Your everyday digital toolkit</title>
+<meta name="description" content="Free tools for documents, money, jobs, study and everyday digital work.">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--bg:#f7f5f0;--fg:#14213d;--card:#fff;--line:#14213d1f;--acc:#e07a1f;--btn:#14213d;--btnfg:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1624;--fg:#eef1f6;--card:#ffffff0d;--line:#ffffff24;--btn:#e07a1f;--btnfg:#14213d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Instrument Sans",system-ui,sans-serif;line-height:1.5}
+header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+header a{font-family:Fraunces,Georgia,serif;font-size:22px;font-weight:700;color:inherit;text-decoration:none}
+main{max-width:860px;margin:0 auto;padding:28px 16px}
+h1{font-family:Fraunces,Georgia,serif;font-size:clamp(30px,6vw,46px);line-height:1.1;margin:0 0 10px}
+h2{margin:0 0 4px;font-size:17px}
+.sub{font-size:18px;opacity:.8;max-width:560px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit}
+input:focus-visible,button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+label{display:block;margin:12px 0 4px;font-size:14px;font-weight:500}
+.btn{display:inline-block;margin-top:12px;padding:10px 16px;border:0;border-radius:10px;background:var(--btn);color:var(--btnfg);font:inherit;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));margin-top:20px}
+.card{display:block;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;color:inherit;text-decoration:none}
+a.card:hover{border-color:var(--acc)}
+.ico{font-size:26px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{padding:5px 12px;border:1px solid var(--line);border-radius:99px;background:transparent;color:inherit;font:inherit;font-size:14px;cursor:pointer}
+.chip.on{background:var(--btn);color:var(--btnfg)}
+.res{margin-top:16px;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.big{font-size:28px;font-weight:700}
+.note{font-size:13px;opacity:.7;margin-top:14px}
+.err{color:#c0392b;margin-top:10px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+footer{max-width:860px;margin:0 auto;padding:24px 16px;font-size:13px;opacity:.7}
+details{margin-top:8px}
+@media(prefers-reduced-motion:no-preference){a.card{transition:border-color .15s}}
+.cv{background:#fff;color:#111;padding:28px;border:1px solid var(--line);border-radius:8px;margin-top:20px;font-size:14px}
+.cv h1{margin:0;font-size:28px;font-family:inherit}.cv h3{margin:16px 0 4px;font-size:14px;border-bottom:1px solid #999;padding-bottom:2px}
+.cv ul{margin:4px 0;padding-left:18px}.cv p{margin:4px 0;white-space:pre-line}
+.cv1{font-family:Georgia,serif;text-align:center}.cv1 ul,.cv1 p{text-align:left}
+.cv2{font-family:"Instrument Sans",sans-serif}.cv2 h1,.cv2 h3{color:#0f766e;border-color:#0f766e}
+.cv3{font-family:"Instrument Sans",sans-serif;border-left:8px solid #e07a1f}.cv3 h3{border:0;color:#e07a1f}
+@media print{body *{visibility:hidden}.cv,.cv *{visibility:visible}.cv{position:absolute;left:0;top:0;width:100%;border:0;margin:0}}
+</style>
+</head>
+<body>
+<header><a href="#/">LifeOS</a><span style="font-size:14px;opacity:.7">Free tools. Your files stay on your device.</span></header>
+<main id="app"></main>
+<footer>Calculators are informational only and not financial advice. File tools run in your browser; nothing is uploaded.<br><a href="#/privacy">Privacy Policy</a> · <a href="#/terms">Terms of Service</a></footer>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const el=(h)=>{const d=document.createElement("div");d.innerHTML=h;return d.firstElementChild};
+const inr=n=>Number.isFinite(n)?n.toLocaleString("en-IN",{maximumFractionDigits:2}):"–";
+const T=[];
+
+// ---------- helper for simple calculators ----------
+function calc(slug,title,cat,icon,desc,kw,fields,fn,formula){
+  T.push({slug,title,cat,icon,desc,kw,faq:[["How is it calculated?",formula]],render(box){
+    box.innerHTML=fields.map(f=>`<label for="${f[0]}">${f[1]}</label><input id="${f[0]}" type="number" step="${f[3]||"any"}" value="${f[2]}">`).join("")+
+      `<div class="res" aria-live="polite" id="out"></div><p class="note">Formula: ${formula}</p>`;
+    const run=()=>{const v={};fields.forEach(f=>v[f[0]]=parseFloat($("#"+f[0]).value));
+      $("#out").innerHTML=fields.some(f=>!Number.isFinite(v[f[0]]))?"Enter all values to see the result.":fn(v)};
+    box.addEventListener("input",run);run();}});
+}
+calc("emi-calculator","EMI Calculator","Money","💰","Monthly instalment, total interest and total payment.",["loan","emi","home","car","interest"],
+ [["p","Loan amount (₹)",500000],["r","Interest rate (% per year)",9,"0.1"],["y","Tenure (years)",5]],
+ v=>{const r=v.r/1200,n=v.y*12;if(v.p<=0||n<=0)return"Loan amount and tenure must be above 0.";
+  const e=r===0?v.p/n:v.p*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);
+  return `Monthly EMI<div class="big">₹${inr(e)}</div>Total interest: ₹${inr(e*n-v.p)}<br>Total payment: ₹${inr(e*n)}`},
+ "EMI = P × r × (1+r)<sup>n</sup> ÷ ((1+r)<sup>n</sup> − 1), r = yearly rate ÷ 12 ÷ 100, n = months");
+calc("simple-interest-calculator","Simple Interest Calculator","Money","🏦","Interest on a principal over time at a fixed rate.",["si","interest","principal"],
+ [["p","Principal (₹)",100000],["r","Rate (% per year)",8,"0.1"],["t","Time (years)",3]],
+ v=>`Interest<div class="big">₹${inr(v.p*v.r*v.t/100)}</div>Total amount: ₹${inr(v.p+v.p*v.r*v.t/100)}`,"SI = P × R × T ÷ 100");
+calc("compound-interest-calculator","Compound Interest Calculator","Money","📈","See how savings grow with yearly compounding.",["ci","interest","savings","growth"],
+ [["p","Principal (₹)",100000],["r","Rate (% per year)",8,"0.1"],["t","Time (years)",5],["n","Compounds per year",1]],
+ v=>{const a=v.p*Math.pow(1+v.r/100/v.n,v.n*v.t);return `Final amount<div class="big">₹${inr(a)}</div>Interest earned: ₹${inr(a-v.p)}`},
+ "A = P × (1 + r/n)<sup>n×t</sup>");
+calc("gst-calculator","GST Calculator","Money","🧾","Add or remove GST from a price.",["gst","tax","invoice"],
+ [["a","Amount (₹)",1000],["g","GST rate (%)",18,"0.1"]],
+ v=>`<b>Add GST:</b> ₹${inr(v.a)} + ₹${inr(v.a*v.g/100)} GST = <span class="big">₹${inr(v.a*(1+v.g/100))}</span><br><br><b>Remove GST</b> (amount includes GST): base price ₹${inr(v.a/(1+v.g/100))}, GST ₹${inr(v.a-v.a/(1+v.g/100))}`,
+ "Add: amount × (1 + rate/100). Remove: amount ÷ (1 + rate/100)");
+calc("discount-calculator","Discount Calculator","Money","🏷️","Find the final price after a discount.",["sale","offer","price"],
+ [["p","Original price (₹)",2000],["d","Discount (%)",25,"0.1"]],
+ v=>`You pay<div class="big">₹${inr(v.p*(1-v.d/100))}</div>You save: ₹${inr(v.p*v.d/100)}`,"Final = price × (1 − discount/100)");
+calc("percentage-calculator","Percentage Calculator","Students","🎓","X% of Y, what percent X is of Y, and change.",["percent","marks","increase","decrease"],
+ [["a","X",20],["b","Y",500]],
+ v=>`${v.a}% of ${v.b} = <b>${inr(v.a/100*v.b)}</b><br>${v.a} is <b>${inr(v.a/v.b*100)}%</b> of ${v.b}<br>Change from ${v.a} to ${v.b}: <b>${inr((v.b-v.a)/v.a*100)}%</b>`,
+ "X% of Y = X ÷ 100 × Y; change = (new − old) ÷ old × 100");
+
+// ---------- CGPA ----------
+T.push({slug:"cgpa-calculator",title:"CGPA Calculator",cat:"Students",icon:"🎓",desc:"Average of your semester SGPAs (equal weight).",kw:["gpa","sgpa","marks","college"],
+ faq:[["How to convert to percentage?","Many Indian universities use CGPA × 9.5, but check your own university's rule."]],
+ render(box){box.innerHTML=`<label for="s">SGPA of each semester, separated by commas</label><input id="s" placeholder="8.2, 7.9, 8.5"><div class="res" id="out" aria-live="polite">Enter your SGPAs.</div><p class="note">CGPA = sum of SGPAs ÷ number of semesters. Use credit-weighted values if your university requires it.</p>`;
+  $("#s").oninput=e=>{const a=e.target.value.split(",").map(x=>parseFloat(x)).filter(Number.isFinite);
+   $("#out").innerHTML=a.length?`CGPA<div class="big">${(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2)}</div>Approx. percentage (×9.5): ${(a.reduce((x,y)=>x+y,0)/a.length*9.5).toFixed(1)}%`:"Enter your SGPAs."}}});
+
+// ---------- QR ----------
+T.push({slug:"qr-code-generator",title:"QR Code Generator",cat:"Everyday Tools",icon:"📱",desc:"Make a QR code for any link or text.",kw:["qr","link","url","code"],
+ faq:[["Does the QR code expire?","No. It stores your text directly."]],
+ render(box){box.innerHTML=`<label for="t">Link or text</label><textarea id="t" rows="3" maxlength="800" placeholder="https://example.com"></textarea><button class="btn" id="go">Generate QR</button><p class="err" id="e" role="alert"></p><div id="q" style="margin-top:14px"></div>`;
+  $("#go").onclick=()=>{const t=$("#t").value.trim(),q=$("#q");q.innerHTML="";$("#e").textContent="";
+   if(!t)return $("#e").textContent="Enter a link or text first.";
+   if(typeof QRCode==="undefined")return $("#e").textContent="QR library could not load. Check your internet and refresh.";
+   new QRCode(q,{text:t,width:240,height:240});
+   setTimeout(()=>{const c=$("canvas",q);if(c){const a=el('<a class="btn" download="qr.png">Download PNG</a>');a.href=c.toDataURL("image/png");q.appendChild(document.createElement("br"));q.appendChild(a)}},150)}}});
+
+// ---------- Image compressor ----------
+T.push({slug:"image-compressor",title:"Image Compressor",cat:"Documents",icon:"🗜️",desc:"Reduce image file size with a quality slider.",kw:["compress","jpg","kb","size","photo","resize"],
+ faq:[["Is my photo uploaded?","No. It is processed on your device."],["How to get under 100 KB?","Lower the quality slider and the width until the size is small enough."]],
+ render(box){box.innerHTML=`<label for="f">Choose a JPG, PNG or WebP image</label><input id="f" type="file" accept="image/jpeg,image/png,image/webp">
+  <label for="q">Quality: <span id="qv">70</span>%</label><input id="q" type="range" min="10" max="100" value="70">
+  <label for="w">Max width in pixels (optional)</label><input id="w" type="number" min="50" placeholder="e.g. 800">
+  <button class="btn" id="go" disabled>Compress</button><p class="err" id="e" role="alert"></p><div id="o"></div>`;
+  let file;$("#q").oninput=e=>$("#qv").textContent=e.target.value;
+  $("#f").onchange=e=>{file=e.target.files[0];$("#e").textContent="";$("#o").innerHTML="";
+   if(file&&(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size>25e6)){file=null;$("#e").textContent="Choose a JPG, PNG or WebP image under 25 MB."}
+   $("#go").disabled=!file};
+  $("#go").onclick=async()=>{$("#go").disabled=true;$("#go").textContent="Compressing…";
+   try{const b=await createImageBitmap(file);let w=b.width,h=b.height;const mw=parseInt($("#w").value);if(mw&&mw<w){h=Math.round(h*mw/w);w=mw}
+    const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.drawImage(b,0,0,w,h);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",$("#q").value/100));const url=URL.createObjectURL(blob);
+    $("#o").innerHTML=`<div class="res">${(file.size/1024).toFixed(0)} KB → <b>${(blob.size/1024).toFixed(0)} KB</b> (${w}×${h}px)<br><a class="btn" href="${url}" download="compressed.jpg">Download</a></div>`;
+   }catch(e){$("#e").textContent="Could not process this image."}
+   $("#go").disabled=false;$("#go").textContent="Compress"}}});
+
+// ---------- JPG to PDF ----------
+T.push({slug:"jpg-to-pdf",title:"JPG to PDF",cat:"Documents",icon:"📄",desc:"Combine images into one PDF in your browser.",kw:["pdf","image","convert","jpg","png","photo"],
+ faq:[["Can I add many images?","Yes, up to 30. Each becomes one A4 page, in the order you select them."],["Are my files uploaded?","No. Everything happens on your device."]],
+ render(box){box.innerHTML=`<label for="f">Choose JPG or PNG images (up to 30)</label><input id="f" type="file" multiple accept="image/jpeg,image/png">
+  <p id="n" class="note"></p><button class="btn" id="go" disabled>Create PDF</button><p class="err" id="e" role="alert"></p>`;
+  let files=[];
+  $("#f").onchange=e=>{files=[...e.target.files];$("#e").textContent="";
+   if(files.length>30||files.some(f=>!/^image\/(jpeg|png)$/.test(f.type))){files=[];$("#e").textContent="Choose up to 30 JPG or PNG images only."}
+   $("#n").textContent=files.length?files.length+" image(s) selected.":"";$("#go").disabled=!files.length};
+  $("#go").onclick=async()=>{if(!window.jspdf)return $("#e").textContent="PDF library could not load. Check your internet and refresh.";
+   $("#go").disabled=true;$("#go").textContent="Creating PDF…";
+   try{const pdf=new jspdf.jsPDF({unit:"pt",format:"a4"}),W=pdf.internal.pageSize.getWidth(),H=pdf.internal.pageSize.getHeight();
+    for(let i=0;i<files.length;i++){const b=await createImageBitmap(files[i]),s=Math.min(W/b.width,H/b.height)*.95;
+     const c=document.createElement("canvas");c.width=b.width;c.height=b.height;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(b,0,0);
+     if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",.92),"JPEG",(W-b.width*s)/2,(H-b.height*s)/2,b.width*s,b.height*s)}
+    pdf.save("images.pdf")}catch(e){$("#e").textContent="Could not create the PDF. Try different images."}
+   $("#go").disabled=false;$("#go").textContent="Create PDF"}}});
+
+// ---------- helpers ----------
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dl=(bytes,name)=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));a.download=name;a.click()};
+const isPdf=f=>f.type==="application/pdf"||/\.pdf$/i.test(f.name);
+
+calc("savings-calculator","Savings Calculator","Money","🐖","See what a monthly deposit grows to (like an RD or SIP at a fixed rate).",["rd","sip","deposit","savings","invest"],
+ [["p","Monthly deposit (₹)",5000],["r","Expected return (% per year)",7,"0.1"],["y","Years",5]],
+ v=>{const i=v.r/1200,n=v.y*12;const fv=i===0?v.p*n:v.p*((Math.pow(1+i,n)-1)/i)*(1+i);return `Value after ${v.y} years<div class="big">₹${inr(fv)}</div>You deposit: ₹${inr(v.p*n)}<br>Growth: ₹${inr(fv-v.p*n)}`},
+ "FV = P × ((1+i)<sup>n</sup> − 1) ÷ i × (1+i), i = monthly rate. Returns are assumptions, not guarantees.");
+
+T.push({slug:"exam-countdown",title:"Exam Countdown",cat:"Students",icon:"⏳",desc:"Days left until your exam or deadline.",kw:["exam","days","deadline","timer"],
+ faq:[["Is my date saved?","Yes, only in your own browser."]],
+ render(box){box.innerHTML=`<label for="n">Name</label><input id="n" maxlength="60" placeholder="Final exam"><label for="d">Date</label><input id="d" type="date"><div class="res" id="out" aria-live="polite">Pick a date.</div>`;
+  const run=()=>{const d=$("#d").value;if(!d)return;const days=Math.ceil((new Date(d+"T00:00:00")-new Date().setHours(0,0,0,0))/864e5);
+   $("#out").innerHTML=(esc($("#n").value)||"Your date")+`<div class="big">${days>0?days+" days left":days===0?"Today!":Math.abs(days)+" days ago"}</div>`+(days>0?`About ${Math.floor(days/7)} weeks and ${days%7} days.`:"");
+   try{localStorage.setItem("cd",JSON.stringify([$("#n").value,d]))}catch(e){}};
+  try{const s=JSON.parse(localStorage.getItem("cd")||"null");if(s){$("#n").value=s[0];$("#d").value=s[1]}}catch(e){}
+  box.addEventListener("input",run);run()}});
+
+// ---------- Resume builder ----------
+T.push({slug:"resume-builder",title:"Resume Builder",cat:"Jobs & Career",icon:"💼",desc:"Fill in your details, pick a template, then print or save as PDF.",kw:["resume","cv","job","career","template"],
+ faq:[["How do I get a PDF?","Click Print / Save as PDF, then choose “Save as PDF” as the printer."],["Is my data stored?","No. It stays in your browser and is never uploaded."],["Tips for a good resume?","Keep it to one page, lead each point with an action verb, and add numbers where you can."]],
+ render(box){
+  const F=[["name","Full name"],["role","Job title (optional)"],["email","Email"],["phone","Phone"],["city","City"]];
+  const A=[["summary","Summary (2–3 lines)",3],["skills","Skills (separate with commas)",2],["exp","Experience (one point per line)",5],["edu","Education (one per line)",3],["proj","Projects (one per line)",3],["cert","Certifications (one per line)",2],["lang","Languages (separate with commas)",1]];
+  box.innerHTML=`<label for="tpl">Template</label><select id="tpl"><option value="cv1">Classic</option><option value="cv2">Modern teal</option><option value="cv3">Side accent</option></select>`+
+   F.map(f=>`<label for="${f[0]}">${f[1]}</label><input id="${f[0]}" maxlength="120">`).join("")+
+   A.map(f=>`<label for="${f[0]}">${f[1]}</label><textarea id="${f[0]}" rows="${f[2]}" maxlength="3000"></textarea>`).join("")+
+   `<button class="btn" id="pr">Print / Save as PDF</button><div id="cv" class="cv"></div>`;
+  const g=id=>$("#"+id).value.trim();
+  const ul=s=>{const l=esc(s).split("\n").filter(x=>x.trim()).map(x=>`<li>${x.replace(/^[-•*]\s*/,"")}</li>`).join("");return l?`<ul>${l}</ul>`:""};
+  const p=s=>s?`<p>${esc(s)}</p>`:"";
+  const sec=(t,h)=>h?`<h3>${t}</h3>${h}`:"";
+  const draw=()=>{const c=$("#cv");c.className="cv "+g("tpl");
+   c.innerHTML=`<h1>${esc(g("name")||"Your Name")}</h1><div>${esc(g("role"))}</div><div>${[g("email"),g("phone"),g("city")].filter(Boolean).map(esc).join(" · ")}</div>`+
+    sec("Summary",p(g("summary")))+sec("Skills",p(g("skills")))+sec("Experience",ul(g("exp")))+sec("Education",ul(g("edu")))+sec("Projects",ul(g("proj")))+sec("Certifications",ul(g("cert")))+sec("Languages",p(g("lang")))};
+  box.addEventListener("input",draw);draw();$("#pr").onclick=()=>window.print()}});
+
+// ---------- PDF merger ----------
+T.push({slug:"pdf-merger",title:"PDF Merger",cat:"Documents",icon:"🔗",desc:"Join several PDF files into one.",kw:["pdf","merge","combine","join"],
+ faq:[["Are my PDFs uploaded?","No. Merging happens on your device."],["What order are they merged in?","The order you select them in."],["Can it merge password-protected PDFs?","No. Remove the password first."]],
+ render(box){box.innerHTML=`<label for="f">Choose 2 or more PDF files</label><input id="f" type="file" multiple accept="application/pdf"><p id="n" class="note"></p><button class="btn" id="go" disabled>Merge PDFs</button><p class="err" id="e" role="alert"></p>`;
+  let files=[];$("#f").onchange=e=>{files=[...e.target.files];$("#e").textContent="";
+   if(files.some(f=>!isPdf(f)||f.size>50e6)){files=[];$("#e").textContent="Choose PDF files under 50 MB each."}
+   $("#n").textContent=files.length?files.map(f=>f.name).join(", "):"";$("#go").disabled=files.length<2};
+  $("#go").onclick=async()=>{if(!window.PDFLib)return $("#e").textContent="PDF library could not load. Check your internet and refresh.";
+   $("#go").disabled=true;$("#go").textContent="Merging…";
+   try{const out=await PDFLib.PDFDocument.create();for(const f of files){const d=await PDFLib.PDFDocument.load(await f.arrayBuffer());(await out.copyPages(d,d.getPageIndices())).forEach(pg=>out.addPage(pg))}
+    dl(await out.save(),"merged.pdf")}catch(e){$("#e").textContent="One of the files could not be read. It may be damaged or password-protected."}
+   $("#go").disabled=false;$("#go").textContent="Merge PDFs"}}});
+
+// ---------- PDF splitter ----------
+T.push({slug:"pdf-splitter",title:"PDF Splitter",cat:"Documents",icon:"✂️",desc:"Extract chosen pages from a PDF into a new file.",kw:["pdf","split","extract","pages"],
+ faq:[["How do I pick pages?","Type page numbers and ranges, like 1-3, 5, 8-10."],["Are my files uploaded?","No. Everything stays on your device."]],
+ render(box){box.innerHTML=`<label for="f">Choose a PDF</label><input id="f" type="file" accept="application/pdf"><p id="n" class="note"></p><label for="r">Pages to keep</label><input id="r" placeholder="1-3, 5"><button class="btn" id="go" disabled>Create new PDF</button><p class="err" id="e" role="alert"></p>`;
+  let file,doc;$("#f").onchange=async e=>{file=e.target.files[0];doc=null;$("#e").textContent="";$("#go").disabled=true;if(!file)return;
+   if(!isPdf(file)||file.size>50e6){file=null;return $("#e").textContent="Choose a PDF under 50 MB."}
+   if(!window.PDFLib)return $("#e").textContent="PDF library could not load. Check your internet and refresh.";
+   try{doc=await PDFLib.PDFDocument.load(await file.arrayBuffer());$("#n").textContent=doc.getPageCount()+" pages in this file.";$("#go").disabled=false}catch(x){$("#e").textContent="This PDF could not be read. It may be damaged or password-protected."}};
+  $("#go").onclick=async()=>{$("#e").textContent="";const max=doc.getPageCount(),set=[];
+   for(const part of $("#r").value.split(",")){const m=part.trim().match(/^(\d+)(?:\s*-\s*(\d+))?$/);if(!m)continue;const a=+m[1],b=+(m[2]||m[1]);for(let i=Math.min(a,b);i<=Math.max(a,b);i++)if(i>=1&&i<=max)set.push(i-1)}
+   if(!set.length)return $("#e").textContent="Enter valid page numbers, like 1-3, 5. This file has "+max+" pages.";
+   const out=await PDFLib.PDFDocument.create();(await out.copyPages(doc,set)).forEach(pg=>out.addPage(pg));dl(await out.save(),"extracted.pdf")}}});
+
+// ---------- Legal pages ----------
+function legal(k){document.title=(k==="privacy"?"Privacy Policy":"Terms of Service")+" | LifeOS";
+ app.innerHTML=k==="privacy"?`<p><a href="#/">← Home</a></p><h1>Privacy Policy</h1><p>Last updated: November 2026. <i>This is a template. Please have a lawyer review it before you rely on it.</i></p>
+ <h2>Your files</h2><p>All file tools (PDF, image, QR) and calculators run inside your browser. Your files and entries are not uploaded to our servers.</p>
+ <h2>What we store</h2><p>Some tools remember small settings (like an exam date) in your own browser storage. You can clear this from your browser settings. This site does not ask for an account and does not collect personal information.</p>
+ <h2>Third-party services</h2><p>The site loads fonts and code libraries from Google Fonts and cdnjs. These providers may see your IP address when files load.</p>
+ <h2>Contact</h2><p>Questions? Write to [your email].</p>`
+ :`<p><a href="#/">← Home</a></p><h1>Terms of Service</h1><p>Last updated: November 2026. <i>This is a template. Please have a lawyer review it before you rely on it.</i></p>
+ <h2>Use of the tools</h2><p>LifeOS tools are provided free and as-is, without warranty. Check results before relying on them.</p>
+ <h2>Not advice</h2><p>Calculators are informational only. They are not financial, legal or tax advice.</p>
+ <h2>Your content</h2><p>You are responsible for the files and information you process. Do not use the tools for anything unlawful.</p>
+ <h2>Changes</h2><p>We may change or remove tools at any time.</p>`;window.scrollTo(0,0)}
+
+// ---------- image helpers ----------
+const dlb=(blob,name)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click()};
+const okImg=f=>f&&/^image\/(jpeg|png|webp)$/.test(f.type)&&f.size<=25e6;
+const toBlob=(c,q)=>new Promise(r=>c.toBlob(r,"image/jpeg",q));
+const white=(w,h)=>{const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);return[c,x]};
+
+// ---------- Image resize ----------
+T.push({slug:"image-resize",title:"Image Resize",cat:"Documents",icon:"📐",desc:"Set exact width and height, or a maximum file size in KB.",kw:["resize","size","kb","pixels","signature","photo","form"],
+ faq:[["How do I get a photo under 50 KB?","Enter 50 in “Maximum size (KB)”. The tool lowers quality until it fits."],["Can I resize a signature?","Yes. Use a small size like 140×60 px and set the KB limit your form asks for."],["Are my files uploaded?","No. Everything stays on your device."]],
+ render(box){box.innerHTML=`<label for="f">Choose a JPG, PNG or WebP image</label><input id="f" type="file" accept="image/jpeg,image/png,image/webp">
+  <div class="row"><div><label for="w">Width (px)</label><input id="w" type="number" min="10"></div><div><label for="h">Height (px)</label><input id="h" type="number" min="10"></div></div>
+  <label><input id="lk" type="checkbox" checked style="width:auto"> Keep proportions</label>
+  <label for="kb">Maximum size in KB (optional)</label><input id="kb" type="number" min="5" placeholder="e.g. 50">
+  <button class="btn" id="go" disabled>Resize</button><p class="err" id="e" role="alert"></p><div id="o"></div>`;
+  let bmp;const ratio=()=>bmp.height/bmp.width;
+  $("#f").onchange=async e=>{const f=e.target.files[0];$("#e").textContent="";$("#o").innerHTML="";bmp=null;$("#go").disabled=true;if(!f)return;
+   if(!okImg(f))return $("#e").textContent="Choose a JPG, PNG or WebP image under 25 MB.";
+   try{bmp=await createImageBitmap(f);$("#w").value=bmp.width;$("#h").value=bmp.height;$("#go").disabled=false}catch(x){$("#e").textContent="Could not read this image."}};
+  $("#w").oninput=()=>{if(bmp&&$("#lk").checked)$("#h").value=Math.round($("#w").value*ratio())};
+  $("#h").oninput=()=>{if(bmp&&$("#lk").checked)$("#w").value=Math.round($("#h").value/ratio())};
+  $("#go").onclick=async()=>{const w=+$("#w").value,h=+$("#h").value,kb=+$("#kb").value;if(!(w>=10&&h>=10&&w<=10000&&h<=10000))return $("#e").textContent="Enter a width and height between 10 and 10000.";
+   $("#e").textContent="";const[c,x]=white(w,h);x.drawImage(bmp,0,0,w,h);let q=.92,b=await toBlob(c,q);
+   if(kb)while(b.size>kb*1024&&q>.1){q-=.07;b=await toBlob(c,q)}
+   const note=kb&&b.size>kb*1024?`<br><span class="err">Could not reach ${kb} KB at this size. Try smaller width and height.</span>`:"";
+   const u=URL.createObjectURL(b);$("#o").innerHTML=`<div class="res">${w}×${h}px, <b>${(b.size/1024).toFixed(0)} KB</b>${note}<br><a class="btn" href="${u}" download="resized.jpg">Download</a></div>`}}});
+
+// ---------- Passport photo ----------
+T.push({slug:"passport-photo-maker",title:"Passport Photo Maker",cat:"Documents",icon:"🪪",desc:"Crop your photo to passport or visa size and make a printable sheet.",kw:["passport","photo","visa","crop","size","id","print"],
+ faq:[["Which size should I choose?","35×45 mm is common in India and many countries; 2×2 inch is used for US documents. Check your form's rules."],["Does it check official rules?","No. Make sure the background, face position and size meet your authority's requirements."],["How do I print the sheet?","Download the sheet and print it at 100% scale (no “fit to page”) on A4 photo paper."]],
+ render(box){box.innerHTML=`<label for="f">Choose a clear front-facing photo</label><input id="f" type="file" accept="image/jpeg,image/png,image/webp">
+  <label for="sz">Size</label><select id="sz"><option value="413,531">35×45 mm (413×531 px)</option><option value="600,600">2×2 inch (600×600 px)</option><option value="390,480">33×42 mm (390×480 px)</option></select>
+  <label for="z">Zoom</label><input id="z" type="range" min="100" max="300" value="100"><label for="ox">Move left / right</label><input id="ox" type="range" min="-100" max="100" value="0"><label for="oy">Move up / down</label><input id="oy" type="range" min="-100" max="100" value="0">
+  <canvas id="c" style="max-width:240px;width:100%;border:1px solid var(--line);margin-top:12px;display:block"></canvas>
+  <button class="btn" id="d1" disabled>Download photo</button> <button class="btn" id="d2" disabled>Download A4 print sheet</button><p class="err" id="e" role="alert"></p>`;
+  let bmp;const c=$("#c");
+  const draw=(cv,W,H)=>{const x=cv.getContext("2d");cv.width=W;cv.height=H;x.fillStyle="#fff";x.fillRect(0,0,W,H);if(!bmp)return;
+   const s=Math.max(W/bmp.width,H/bmp.height)*$("#z").value/100,bw=bmp.width*s,bh=bmp.height*s;
+   x.drawImage(bmp,(W-bw)/2+$("#ox").value/100*Math.max(0,bw-W)/2,(H-bh)/2+$("#oy").value/100*Math.max(0,bh-H)/2,bw,bh)};
+  const dim=()=>$("#sz").value.split(",").map(Number);const upd=()=>{const[W,H]=dim();draw(c,W,H)};
+  box.addEventListener("input",e=>{if(e.target.id!=="f")upd()});
+  $("#f").onchange=async e=>{const f=e.target.files[0];$("#e").textContent="";bmp=null;$("#d1").disabled=$("#d2").disabled=true;if(!f)return upd();
+   if(!okImg(f))return $("#e").textContent="Choose a JPG, PNG or WebP image under 25 MB.";
+   try{bmp=await createImageBitmap(f);upd();$("#d1").disabled=$("#d2").disabled=false}catch(x){$("#e").textContent="Could not read this image."}};
+  $("#d1").onclick=async()=>dlb(await toBlob(c,.95),"passport-photo.jpg");
+  $("#d2").onclick=async()=>{const[W,H]=dim(),[s,sx]=white(2480,3508),g=30;sx.strokeStyle="#bbb";
+   const cols=Math.floor((2480-100)/(W+g)),rows=Math.floor((3508-100)/(H+g));
+   for(let r=0;r<Math.min(rows,3);r++)for(let k=0;k<cols;k++){const x=50+k*(W+g),y=50+r*(H+g);sx.drawImage(c,x,y);sx.strokeRect(x,y,W,H)}
+   dlb(await toBlob(s,.95),"passport-sheet.jpg")};upd()}});
+
+// ---------- ID card print layout ----------
+T.push({slug:"id-card-print-layout",title:"ID Card Print Layout",cat:"Documents",icon:"🖨️",desc:"Put the front and back photos of your own card on one A4 page at real card size.",kw:["aadhaar","aadhar","pan","licence","id","card","print","copy","xerox"],
+ faq:[["Which cards work?","Any card you already have photos or scans of, such as Aadhaar, PAN, driving licence or college ID."],["What size is printed?","Standard card size, 85.6 × 54 mm, when printed at 100% scale."],["Is this for new cards?","No. It only arranges photos of your own existing card. Download an official copy from the issuer if you need a new one."]],
+ render(box){box.innerHTML=`<p class="note">Use only your own documents. Files stay on your device.</p><label for="a">Front side photo</label><input id="a" type="file" accept="image/jpeg,image/png,image/webp"><label for="b">Back side photo (optional)</label><input id="b" type="file" accept="image/jpeg,image/png,image/webp">
+  <button class="btn" id="go">Create A4 PDF</button><p class="err" id="e" role="alert"></p>`;
+  $("#go").onclick=async()=>{$("#e").textContent="";const fs=[$("#a").files[0],$("#b").files[0]].filter(Boolean);
+   if(!fs.length)return $("#e").textContent="Choose at least the front side photo.";if(fs.some(f=>!okImg(f)))return $("#e").textContent="Choose JPG, PNG or WebP images under 25 MB.";
+   if(!window.jspdf)return $("#e").textContent="PDF library could not load. Check your internet and refresh.";
+   try{const pdf=new jspdf.jsPDF({unit:"mm",format:"a4"});let y=25;
+    for(const f of fs){const b=await createImageBitmap(f),w=85.6,h=w*b.height/b.width,[c,x]=white(b.width,b.height);x.drawImage(b,0,0);
+     pdf.addImage(c.toDataURL("image/jpeg",.95),"JPEG",(210-w)/2,y,w,h);pdf.setDrawColor(150);pdf.rect((210-w)/2,y,w,h);y+=h+12}
+    pdf.save("id-card-a4.pdf")}catch(e){$("#e").textContent="Could not create the PDF. Try different images."}}}});
+
+// ---------- Mask / hide part of image ----------
+T.push({slug:"hide-part-of-image",title:"Hide Part of Image (Mask)",cat:"Documents",icon:"🙈",desc:"Black out private details, like the first 8 digits of an ID number, before sharing.",kw:["mask","hide","blur","aadhaar","aadhar","redact","privacy","number"],
+ faq:[["Why mask an ID number?","Many forms only need the last 4 digits. Hiding the rest lowers the risk if the copy is misused."],["Is the hidden part really removed?","Yes. The black boxes are drawn into a new image, so the covered pixels are gone."],["How do I use it?","Drag a box over the area on the image. Use Undo if you make a mistake."]],
+ render(box){box.innerHTML=`<label for="f">Choose an image</label><input id="f" type="file" accept="image/jpeg,image/png,image/webp"><p class="note">Drag on the image to draw black boxes.</p>
+  <canvas id="c" style="width:100%;touch-action:none;border:1px solid var(--line);display:none;cursor:crosshair"></canvas>
+  <button class="btn" id="un" disabled>Undo</button> <button class="btn" id="d" disabled>Download masked image</button><p class="err" id="e" role="alert"></p>`;
+  const c=$("#c"),x=c.getContext("2d");let bmp,R=[],cur=null;
+  const draw=()=>{x.drawImage(bmp,0,0);x.fillStyle="#000";[...R,cur].filter(Boolean).forEach(r=>x.fillRect(...r))};
+  const pt=e=>{const b=c.getBoundingClientRect();return[(e.clientX-b.left)*c.width/b.width,(e.clientY-b.top)*c.height/b.height]};
+  $("#f").onchange=async e=>{const f=e.target.files[0];$("#e").textContent="";R=[];if(!f)return;if(!okImg(f))return $("#e").textContent="Choose a JPG, PNG or WebP image under 25 MB.";
+   try{bmp=await createImageBitmap(f);c.width=bmp.width;c.height=bmp.height;c.style.display="block";draw();$("#un").disabled=$("#d").disabled=false}catch(x){$("#e").textContent="Could not read this image."}};
+  c.onpointerdown=e=>{if(!bmp)return;c.setPointerCapture(e.pointerId);const[a,b]=pt(e);cur=[a,b,0,0]};
+  c.onpointermove=e=>{if(!cur)return;const[a,b]=pt(e);cur[2]=a-cur[0];cur[3]=b-cur[1];draw()};
+  c.onpointerup=()=>{if(cur&&Math.abs(cur[2])>3&&Math.abs(cur[3])>3)R.push(cur);cur=null;draw()};
+  $("#un").onclick=()=>{R.pop();draw()};
+  $("#d").onclick=async()=>{const[o,ox]=white(c.width,c.height);ox.drawImage(c,0,0);dlb(await toBlob(o,.95),"masked.jpg")}}});
+
+// ---------- Certificate maker ----------
+T.push({slug:"certificate-maker",title:"Certificate Maker",cat:"Everyday Tools",icon:"🏅",desc:"Make a certificate of completion or appreciation issued by your own brand, class or event.",kw:["certificate","award","course","appreciation","completion","achievement"],
+ faq:[["Who is the certificate from?","From the organisation or person you type in “Issued by”. Use your own name, brand or event only."],["Can I use another person's or an official body's name?","No. Do not use the names, signatures or logos of the government, army, police, doctors, companies or other people without their written permission."],["Is it an official qualification?","No. A line on every certificate says it is not an official or government document."]],
+ render(box){box.innerHTML=`<p class="note">Use only for your own brand, class, event or community. Do not use another person's or an official body's name or signature without permission.</p>
+  <label for="ti">Certificate title</label><input id="ti" value="Certificate of Completion" maxlength="50">
+  <label for="rn">Recipient name</label><input id="rn" value="Recipient Name" maxlength="50">
+  <label for="ds">What it is for</label><textarea id="ds" rows="3" maxlength="220">has successfully completed the Basic Trading Concepts workshop.</textarea>
+  <label for="is">Issued by (your name or brand)</label><input id="is" placeholder="Your name or brand" maxlength="50">
+  <div class="row"><div><label for="sg">Signer name</label><input id="sg" placeholder="Your name" maxlength="40"></div><div><label for="st">Signer title</label><input id="st" placeholder="Founder" maxlength="40"></div></div>
+  <div class="row"><div><label for="dt">Date</label><input id="dt" type="date"></div><div><label for="th">Style</label><select id="th"><option value="0">Navy and gold</option><option value="1">Teal</option><option value="2">Saffron</option></select></div></div>
+  <canvas id="c" width="1754" height="1240" style="width:100%;border:1px solid var(--line);margin-top:16px"></canvas>
+  <button class="btn" id="png">Download PNG</button> <button class="btn" id="pdf">Download PDF</button><p class="err" id="e" role="alert"></p>`;
+  $("#dt").value=new Date().toISOString().slice(0,10);
+  const c=$("#c"),x=c.getContext("2d"),P=[["#14213d","#b8892b"],["#0f766e","#134e4a"],["#c2410c","#7c2d12"]];
+  const wrap=(t,cx,y,mw,lh)=>{const w=t.split(/\s+/);let l="";for(const k of w){if(x.measureText(l+k).width>mw&&l){x.fillText(l.trim(),cx,y);y+=lh;l=""}l+=k+" "}x.fillText(l.trim(),cx,y)};
+  const draw=()=>{const[a,b]=P[+$("#th").value],W=1754,H=1240;x.textAlign="center";x.fillStyle="#fffdf7";x.fillRect(0,0,W,H);
+   x.strokeStyle=a;x.lineWidth=14;x.strokeRect(50,50,W-100,H-100);x.strokeStyle=b;x.lineWidth=4;x.strokeRect(80,80,W-160,H-160);
+   x.fillStyle=a;x.font="700 82px Georgia,serif";x.fillText($("#ti").value||"Certificate",W/2,330);
+   x.fillStyle="#444";x.font="30px Georgia,serif";x.fillText("This certificate is proudly presented to",W/2,430);
+   x.fillStyle=b;x.font="italic 700 96px Georgia,serif";x.fillText($("#rn").value||"Recipient",W/2,570);
+   x.strokeStyle=b;x.lineWidth=3;x.beginPath();x.moveTo(W/2-380,605);x.lineTo(W/2+380,605);x.stroke();
+   x.fillStyle="#333";x.font="34px Georgia,serif";wrap($("#ds").value,W/2,700,1100,52);
+   x.font="italic 52px Georgia,serif";x.fillStyle=a;x.fillText($("#sg").value,1300,950);
+   x.strokeStyle="#666";x.lineWidth=2;x.beginPath();x.moveTo(1100,970);x.lineTo(1500,970);x.stroke();
+   x.fillStyle="#444";x.font="26px Georgia,serif";x.fillText($("#st").value,1300,1008);
+   x.fillText($("#dt").value,450,950);x.beginPath();x.moveTo(250,970);x.lineTo(650,970);x.stroke();x.fillText("Date",450,1008);
+   x.font="24px Georgia,serif";x.fillStyle="#222";x.fillText("Issued by "+($("#is").value||"the issuer named above"),W/2,1110);
+   x.font="20px sans-serif";x.fillStyle="#777";x.fillText("This is not an official or government document and does not confer any qualification.",W/2,1150)};
+  box.addEventListener("input",draw);draw();
+  const ok=()=>{if(!$("#is").value.trim()){$("#e").textContent="Enter who the certificate is issued by.";return false}$("#e").textContent="";return true};
+  $("#png").onclick=()=>{if(ok())c.toBlob(b=>dlb(b,"certificate.png"))};
+  $("#pdf").onclick=()=>{if(!ok())return;if(!window.jspdf)return $("#e").textContent="PDF library could not load. Check your internet and refresh.";
+   const d=new jspdf.jsPDF({orientation:"landscape",unit:"mm",format:"a4"});d.addImage(c.toDataURL("image/jpeg",.95),"JPEG",0,0,297,210);d.save("certificate.pdf")}}});
+
+// ---------- Cover letter ----------
+T.push({slug:"cover-letter-generator",title:"Cover Letter Generator",cat:"Jobs & Career",icon:"✉️",desc:"Fill a few details and get a clean cover letter you can edit, copy or save as PDF.",kw:["cover","letter","job","apply","application","resume"],
+ faq:[["Is this written by AI?","No. It fills your details into a proven letter structure. Edit the text so it sounds like you."],["Is my data uploaded?","No. Everything stays in your browser."],["How long should a cover letter be?","One page, 3 short paragraphs."]],
+ render(box){const F=[["nm","Your name"],["ct","Phone / email"],["co","Company name"],["rl","Job title you are applying for"],["yr","Years of experience (or “fresher”)"],["sk","Key skills (comma separated)"],["ac","One achievement or project (optional)"],["wy","Why this company? (optional)"]];
+  box.innerHTML=F.map(f=>`<label for="${f[0]}">${f[1]}</label><input id="${f[0]}" maxlength="200">`).join("")+`<button class="btn" id="mk">Create letter</button><div id="o" style="display:none"><label for="tx">Your letter (you can edit it)</label><textarea id="tx" rows="16"></textarea><button class="btn" id="cp">Copy</button> <button class="btn" id="pd">Download PDF</button></div><p class="err" id="e" role="alert"></p>`;
+  const g=i=>$("#"+i).value.trim();
+  $("#mk").onclick=()=>{if(!g("nm")||!g("co")||!g("rl"))return $("#e").textContent="Enter your name, the company and the job title.";$("#e").textContent="";
+   const y=g("yr"),fresh=!y||/fresh/i.test(y);
+   const t=`Dear Hiring Manager,\n\nI am writing to apply for the ${g("rl")} position at ${g("co")}. ${fresh?"As a motivated and quick learner":"With "+y+(/\d$/.test(y)?" years":"")+" of experience"}, I am confident I can add value to your team.\n\n${g("sk")?"My key strengths include "+g("sk")+". ":""}${g("ac")?"For example, "+g("ac")+". ":""}I take responsibility for my work, communicate clearly and keep learning.\n\n${g("wy")?"I am especially interested in "+g("co")+" because "+g("wy")+". ":"I would be glad to contribute to the goals of "+g("co")+". "}I would welcome the chance to discuss how I can help.\n\nThank you for your time and consideration.\n\nSincerely,\n${g("nm")}${g("ct")?"\n"+g("ct"):""}`;
+   $("#tx").value=t;$("#o").style.display="block"};
+  $("#cp").onclick=()=>navigator.clipboard.writeText($("#tx").value).then(()=>{$("#cp").textContent="Copied!";setTimeout(()=>$("#cp").textContent="Copy",1500)}).catch(()=>{$("#tx").select()});
+  $("#pd").onclick=()=>{if(!window.jspdf)return $("#e").textContent="PDF library could not load. Check your internet and refresh.";
+   const d=new jspdf.jsPDF({unit:"mm",format:"a4"});d.setFont("times","normal");d.setFontSize(12);d.text(d.splitTextToSize($("#tx").value,170),20,25,{lineHeightFactor:1.5});d.save("cover-letter.pdf")}}});
+
+// ---------- Interview questions ----------
+T.push({slug:"interview-question-generator",title:"Interview Question Generator",cat:"Jobs & Career",icon:"🎤",desc:"Practice questions for your role, plus answer tips. Shuffle for a fresh set.",kw:["interview","questions","practice","job","hr","prepare"],
+ faq:[["How should I answer “Tell me about yourself”?","Give 3 parts: who you are now, what you have done, and why this role."],["What is the STAR method?","Situation, Task, Action, Result. Use it for behaviour questions."]],
+ render(box){const B={"General (any job)":["Tell me about yourself.","Why do you want this job?","What are your strengths?","What is a weakness you are working on?","Where do you see yourself in 5 years?","Why should we hire you?","Describe a time you solved a hard problem.","Tell me about a time you worked in a team.","How do you handle pressure or deadlines?","Why are you leaving your current job?","What salary do you expect and why?","Do you have any questions for us?"],
+  "Software / IT":["Explain a project you built and your role.","What is the difference between an array and a linked list?","How do you debug a problem you cannot reproduce?","What is REST and how is it different from GraphQL?","Explain how you would design a URL shortener.","How do you keep your code readable and maintainable?","What is version control and how do you use Git in a team?","Tell me about a bug you fixed that taught you something."],
+  "Sales / Marketing":["How do you handle rejection?","Describe your sales process from first contact to close.","How do you research a new customer?","Tell me about a target you achieved.","How would you promote a product with a small budget?","Which marketing metrics matter most and why?"],
+  "Customer support":["How do you handle an angry customer?","Tell me about a time you went beyond what was needed.","How do you prioritise many requests?","What would you do if you do not know the answer?","How do you stay calm and polite on difficult calls?"],
+  "Teaching":["What is your teaching style?","How do you help a student who is falling behind?","How do you keep a class engaged?","How do you assess learning?","How do you handle a disruptive student?"],
+  "Finance / Accounts":["Explain the difference between profit and cash flow.","How do you make sure your reports are accurate?","Which accounting software have you used?","Tell me about a time you found an error. What did you do?","How do you keep up with GST and tax rule changes?"]};
+  box.innerHTML=`<label for="r">Role</label><select id="r">${Object.keys(B).map(k=>`<option>${k}</option>`).join("")}</select><button class="btn" id="sh">Shuffle questions</button><ol id="l" style="margin-top:16px"></ol>
+   <div class="res"><b>Answer tips</b><br>• Keep answers under 2 minutes.<br>• For behaviour questions use STAR: Situation, Task, Action, Result.<br>• Use real examples and numbers.<br>• Practise out loud, not just in your head.</div>`;
+  const draw=()=>{const q=[...B[$("#r").value]].sort(()=>Math.random()-.5).slice(0,6);$("#l").innerHTML=q.map(x=>`<li style="margin:8px 0">${esc(x)}</li>`).join("")};
+  $("#r").onchange=$("#sh").onclick=draw;draw()}});
+
+// ---------- PDF to JPG ----------
+const pdfOpen=async f=>{pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";return pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise};
+const pdfPage=async(doc,n,scale)=>{const pg=await doc.getPage(n),vp=pg.getViewport({scale}),[c,x]=white(Math.ceil(vp.width),Math.ceil(vp.height));await pg.render({canvasContext:x,viewport:vp}).promise;return c};
+T.push({slug:"pdf-to-jpg",title:"PDF to JPG",cat:"Documents",icon:"🖼️",desc:"Turn every page of a PDF into a JPG image.",kw:["pdf","jpg","image","convert","pages"],
+ faq:[["Are my files uploaded?","No. Pages are converted on your device."],["Is there a page limit?","The first 40 pages are converted to keep your browser fast."],["Why is a page blurry?","Choose a higher quality setting."]],
+ render(box){box.innerHTML=`<label for="f">Choose a PDF (up to 50 MB)</label><input id="f" type="file" accept="application/pdf"><label for="s">Quality</label><select id="s"><option value="1.5">Standard</option><option value="2.5">High</option></select><button class="btn" id="go" disabled>Convert</button><p class="err" id="e" role="alert"></p><div id="o" class="grid"></div>`;
+  let file;$("#f").onchange=e=>{file=e.target.files[0];$("#e").textContent="";$("#o").innerHTML="";if(file&&(!isPdf(file)||file.size>50e6)){file=null;$("#e").textContent="Choose a PDF under 50 MB."}$("#go").disabled=!file};
+  $("#go").onclick=async()=>{if(!window.pdfjsLib)return $("#e").textContent="PDF library could not load. Check your internet and refresh.";
+   $("#go").disabled=true;$("#go").textContent="Converting…";$("#o").innerHTML="";$("#e").textContent="";
+   try{const d=await pdfOpen(file),n=Math.min(d.numPages,40);for(let i=1;i<=n;i++){const c=await pdfPage(d,i,+$("#s").value),b=await toBlob(c,.92),u=URL.createObjectURL(b);
+     $("#o").insertAdjacentHTML("beforeend",`<div class="card"><img src="${u}" alt="Page ${i}" style="width:100%"><a class="btn" href="${u}" download="page-${i}.jpg">Download page ${i}</a></div>`)}
+    if(d.numPages>n)$("#e").textContent="Only the first 40 pages were converted."}catch(e){$("#e").textContent="Could not read this PDF. It may be damaged or password-protected."}
+   $("#go").disabled=false;$("#go").textContent="Convert"}}});
+
+// ---------- PDF compressor ----------
+T.push({slug:"pdf-compressor",title:"PDF Compressor",cat:"Documents",icon:"📉",desc:"Make a scanned or image-heavy PDF smaller.",kw:["pdf","compress","size","kb","mb","reduce"],
+ faq:[["How does it work?","Each page is turned into a compressed image and rebuilt as a new PDF."],["What is the catch?","Text in the new PDF is no longer selectable or searchable. Best for scanned documents and photos."],["It got bigger. Why?","Text-only PDFs are already small. Keep your original in that case."]],
+ render(box){box.innerHTML=`<label for="f">Choose a PDF (up to 50 MB)</label><input id="f" type="file" accept="application/pdf"><label for="q">Image quality: <span id="qv">60</span>%</label><input id="q" type="range" min="20" max="90" value="60"><label for="s">Resolution</label><select id="s"><option value="1">Smaller file (72 dpi)</option><option value="1.5" selected>Balanced (108 dpi)</option><option value="2">Sharper (144 dpi)</option></select>
+  <p class="note">Text in the result will not be selectable. Keep your original file.</p><button class="btn" id="go" disabled>Compress</button><p class="err" id="e" role="alert"></p><div id="o"></div>`;
+  let file;$("#q").oninput=e=>$("#qv").textContent=e.target.value;
+  $("#f").onchange=e=>{file=e.target.files[0];$("#e").textContent="";$("#o").innerHTML="";if(file&&(!isPdf(file)||file.size>50e6)){file=null;$("#e").textContent="Choose a PDF under 50 MB."}$("#go").disabled=!file};
+  $("#go").onclick=async()=>{if(!window.pdfjsLib||!window.jspdf)return $("#e").textContent="Libraries could not load. Check your internet and refresh.";
+   $("#go").disabled=true;$("#e").textContent="";$("#o").innerHTML="";
+   try{const d=await pdfOpen(file),n=Math.min(d.numPages,60);let out;
+    for(let i=1;i<=n;i++){$("#go").textContent=`Compressing page ${i} of ${n}…`;const pg=await d.getPage(i),v=pg.getViewport({scale:1}),o=v.width>v.height?"l":"p";
+     const c=await pdfPage(d,i,+$("#s").value);if(i===1)out=new jspdf.jsPDF({unit:"pt",format:[v.width,v.height],orientation:o});else out.addPage([v.width,v.height],o);
+     out.addImage(c.toDataURL("image/jpeg",$("#q").value/100),"JPEG",0,0,v.width,v.height)}
+    const blob=out.output("blob");$("#o").innerHTML=`<div class="res">${(file.size/1024).toFixed(0)} KB → <b>${(blob.size/1024).toFixed(0)} KB</b>${blob.size>=file.size?'<br><span class="err">The new file is not smaller. Keep your original.</span>':""}${d.numPages>n?"<br>Only the first 60 pages were processed.":""}<br><a class="btn" href="${URL.createObjectURL(blob)}" download="compressed.pdf">Download</a></div>`;
+   }catch(e){$("#e").textContent="Could not process this PDF. It may be damaged or password-protected."}
+   $("#go").disabled=false;$("#go").textContent="Compress"}}});
+
+// =====================  BIG BATCH: factories  =====================
+const c2=(slug,title,cat,icon,desc,kw,fs,fn,formula)=>calc(slug,title,cat,icon,desc,kw,fs.split("|").map(s=>{const[a,b,c,d]=s.split(":");return[a,b,+c,d]}),fn,formula);
+const f2=n=>inr(+n.toFixed(2));
+const beep=()=>{try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},600)}catch(e){}};
+const ls={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const rnd=n=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n};
+
+// ----- unit converters -----
+function conv(slug,title,icon,units,kw){T.push({slug,title,cat:"Converters",icon,desc:`Convert ${title.replace(" Converter","").toLowerCase()} units instantly.`,kw:["convert","unit",...kw],faq:[["How accurate is it?","It uses standard conversion factors, shown to 10 significant digits."]],render(box){
+  const o=Object.keys(units).map(k=>`<option>${k}</option>`).join("");
+  box.innerHTML=`<label for="v">Value</label><input id="v" type="number" value="1" step="any"><div class="row"><div><label for="a">From</label><select id="a">${o}</select></div><div><label for="b">To</label><select id="b">${o}</select></div></div><div class="res big" id="out" aria-live="polite"></div>`;
+  $("#b").selectedIndex=Math.min(1,Object.keys(units).length-1);
+  const run=()=>{const v=parseFloat($("#v").value);$("#out").textContent=Number.isFinite(v)?String(+(v*units[$("#a").value]/units[$("#b").value]).toPrecision(10))+" "+$("#b").value:"Enter a number."};box.addEventListener("input",run);run()}})}
+conv("length-converter","Length Converter","📏",{Millimetre:.001,Centimetre:.01,Metre:1,Kilometre:1000,Inch:.0254,Foot:.3048,Yard:.9144,Mile:1609.344},["cm","inch","feet","km","miles"]);
+conv("weight-converter","Weight Converter","⚖️",{Milligram:1e-6,Gram:.001,Kilogram:1,Quintal:100,Tonne:1000,Ounce:.028349523,Pound:.45359237,Tola:.011663800},["kg","pound","gram","tola"]);
+conv("area-converter","Area Converter","🗺️",{"Square metre":1,"Square foot":.09290304,"Square yard":.83612736,Acre:4046.8564224,Hectare:1e4,"Square km":1e6},["land","acre","sq ft","hectare"]);
+conv("volume-converter","Volume Converter","🧪",{Millilitre:.001,Litre:1,"Cubic metre":1000,Teaspoon:.00492892,Tablespoon:.0147868,"Cup (US)":.236588,"Gallon (US)":3.78541,"Fluid ounce (US)":.0295735},["litre","ml","cup","gallon"]);
+conv("speed-converter","Speed Converter","🚗",{"Metre/second":1,"Km/hour":1/3.6,"Mile/hour":.44704,Knot:.514444},["kmph","mph","speed"]);
+conv("time-converter","Time Converter","⏱️",{Second:1,Minute:60,Hour:3600,Day:86400,Week:604800,Year:31557600},["hours","minutes","days","seconds"]);
+conv("file-size-converter","File Size Converter","💾",{Bit:.125,Byte:1,KB:1024,MB:1048576,GB:1073741824,TB:1099511627776},["kb","mb","gb","data","storage"]);
+conv("energy-converter","Energy Converter","⚡",{Joule:1,Kilojoule:1e3,Calorie:4.184,Kilocalorie:4184,"Watt-hour":3600,"Kilowatt-hour":3.6e6},["calorie","joule","kwh"]);
+conv("pressure-converter","Pressure Converter","🌡️",{Pascal:1,Kilopascal:1e3,Bar:1e5,PSI:6894.757,Atmosphere:101325},["psi","bar","pascal"]);
+conv("power-converter","Power Converter","🔌",{Watt:1,Kilowatt:1e3,Horsepower:745.7},["hp","watt","kw"]);
+conv("angle-converter","Angle Converter","📐",{Degree:1,Radian:180/Math.PI,Gradian:.9},["degree","radian"]);
+T.push({slug:"temperature-converter",title:"Temperature Converter",cat:"Converters",icon:"🌡️",desc:"Celsius, Fahrenheit and Kelvin.",kw:["celsius","fahrenheit","kelvin","convert"],faq:[["Formula?","F = C × 9/5 + 32; K = C + 273.15."]],render(box){
+ box.innerHTML=`<label for="v">Value</label><input id="v" type="number" value="25" step="any"><div class="row"><div><label for="a">From</label><select id="a"><option>Celsius</option><option>Fahrenheit</option><option>Kelvin</option></select></div></div><div class="res" id="out" aria-live="polite"></div>`;
+ const run=()=>{const v=parseFloat($("#v").value),a=$("#a").value;if(!Number.isFinite(v))return $("#out").textContent="Enter a number.";
+  const c=a==="Celsius"?v:a==="Fahrenheit"?(v-32)*5/9:v-273.15;$("#out").innerHTML=`${+c.toFixed(4)} °C<br>${+(c*9/5+32).toFixed(4)} °F<br>${+(c+273.15).toFixed(4)} K`};box.addEventListener("input",run);run()}});
+
+// ----- more calculators -----
+c2("sip-calculator","SIP Calculator","Money","📊","Estimate the future value of a monthly SIP at an assumed return.",["sip","mutual fund","invest","monthly"],"p:Monthly investment (₹):5000|r:Expected return (% per year):12:0.1|y:Years:10",
+ v=>{const i=v.r/1200,n=v.y*12,fv=i===0?v.p*n:v.p*((Math.pow(1+i,n)-1)/i)*(1+i);return `Future value<div class="big">₹${inr(fv)}</div>Invested: ₹${inr(v.p*n)}<br>Estimated returns: ₹${inr(fv-v.p*n)}`},"FV = P × ((1+i)<sup>n</sup> − 1) ÷ i × (1+i). Returns are assumptions, not guaranteed.");
+c2("lumpsum-calculator","Lumpsum Calculator","Money","💎","Value of a one-time investment after some years.",["lumpsum","invest","growth"],"p:Amount (₹):100000|r:Return (% per year):12:0.1|y:Years:10",
+ v=>{const a=v.p*Math.pow(1+v.r/100,v.y);return `Future value<div class="big">₹${inr(a)}</div>Gain: ₹${inr(a-v.p)}`},"A = P × (1 + r)<sup>t</sup>");
+c2("fd-calculator","FD Calculator","Money","🏛️","Fixed deposit maturity amount with quarterly compounding.",["fd","fixed deposit","bank","maturity"],"p:Deposit (₹):100000|r:Interest rate (% per year):7:0.1|y:Years:3",
+ v=>{const a=v.p*Math.pow(1+v.r/400,4*v.y);return `Maturity amount<div class="big">₹${inr(a)}</div>Interest: ₹${inr(a-v.p)}`},"A = P × (1 + r/4)<sup>4t</sup>. Your bank's compounding may differ.");
+c2("cagr-calculator","CAGR Calculator","Money","📈","Compound annual growth rate of an investment.",["cagr","growth","returns"],"s:Starting value (₹):100000|e:Ending value (₹):200000|y:Years:5",
+ v=>v.s>0&&v.y>0&&v.e>0?`CAGR<div class="big">${f2((Math.pow(v.e/v.s,1/v.y)-1)*100)}% per year</div>`:"Values and years must be above 0.","CAGR = (End ÷ Start)<sup>1/years</sup> − 1");
+c2("roi-calculator","ROI Calculator","Money","🎯","Return on investment in percent.",["roi","return","profit"],"c:Amount invested (₹):100000|g:Final value (₹):130000",
+ v=>v.c>0?`ROI<div class="big">${f2((v.g-v.c)/v.c*100)}%</div>Profit / loss: ₹${f2(v.g-v.c)}`:"Invested amount must be above 0.","ROI = (Final − Invested) ÷ Invested × 100");
+c2("profit-margin-calculator","Profit Margin Calculator","Money","🛍️","Profit, margin and markup from cost and selling price.",["profit","margin","markup","business","shop"],"c:Cost price (₹):800|s:Selling price (₹):1000",
+ v=>v.c>0&&v.s>0?`Profit: <b>₹${f2(v.s-v.c)}</b><br>Margin: <b>${f2((v.s-v.c)/v.s*100)}%</b><br>Markup: <b>${f2((v.s-v.c)/v.c*100)}%</b>`:"Enter prices above 0.","Margin = profit ÷ selling price; markup = profit ÷ cost");
+c2("break-even-calculator","Break-even Calculator","Money","⚖️","How many units you must sell to cover your costs.",["break even","business","units","cost"],"f:Fixed costs (₹):100000|p:Price per unit (₹):500|v:Variable cost per unit (₹):300",
+ v=>v.p>v.v?`Break-even<div class="big">${Math.ceil(v.f/(v.p-v.v)).toLocaleString("en-IN")} units</div>Sales needed: ₹${inr(Math.ceil(v.f/(v.p-v.v))*v.p)}`:"Price must be higher than variable cost.","Units = fixed costs ÷ (price − variable cost)");
+c2("inflation-calculator","Inflation Calculator","Money","🔥","What costs will look like after some years.",["inflation","price","future"],"a:Amount today (₹):100000|r:Inflation (% per year):6:0.1|y:Years:10",
+ v=>`Same things will cost<div class="big">₹${inr(v.a*Math.pow(1+v.r/100,v.y))}</div>₹${inr(v.a)} will buy only what ₹${inr(v.a/Math.pow(1+v.r/100,v.y))} buys today.`,"Future cost = amount × (1 + rate)<sup>years</sup>");
+c2("bill-splitter","Bill Splitter","Everyday Tools","🍽️","Split a bill with tip between friends.",["bill","tip","split","restaurant"],"b:Bill amount (₹):2000|t:Tip (%):10:0.1|n:People:4",
+ v=>v.n>0?`Total with tip: ₹${f2(v.b*(1+v.t/100))}<div class="big">₹${f2(v.b*(1+v.t/100)/v.n)} each</div>`:"People must be at least 1.","Each = bill × (1 + tip/100) ÷ people");
+c2("hourly-wage-calculator","Hourly Wage Calculator","Jobs & Career","⏰","Turn an hourly rate into weekly, monthly and yearly pay.",["wage","hourly","salary","income"],"h:Hourly rate (₹):200|w:Hours per week:40",
+ v=>`Weekly: ₹${inr(v.h*v.w)}<br>Monthly: <b>₹${inr(v.h*v.w*52/12)}</b><br>Yearly: ₹${inr(v.h*v.w*52)}`,"Yearly = rate × hours × 52. Before tax.");
+c2("gratuity-calculator","Gratuity Calculator","Jobs & Career","🎁","Estimate gratuity under the Payment of Gratuity Act formula.",["gratuity","salary","job","retirement"],"s:Last drawn basic + DA (₹ per month):40000|y:Completed years of service:10",
+ v=>`Gratuity<div class="big">₹${inr(v.s*15/26*v.y)}</div>`,"Gratuity = last salary × 15 ÷ 26 × years. Usually needs 5+ years of service and has a legal cap. Check your company policy.");
+c2("fuel-cost-calculator","Fuel Cost Calculator","Everyday Tools","⛽","Trip fuel cost from distance and mileage.",["fuel","petrol","diesel","trip","mileage"],"d:Distance (km):300|m:Mileage (km per litre):15|p:Fuel price (₹ per litre):100",
+ v=>v.m>0?`Fuel needed: ${f2(v.d/v.m)} litres<div class="big">₹${inr(v.d/v.m*v.p)}</div>`:"Mileage must be above 0.","Cost = distance ÷ mileage × price");
+c2("electricity-bill-calculator","Electricity Bill Calculator","Everyday Tools","💡","Monthly cost of running an appliance.",["electricity","bill","units","power","ac"],"w:Appliance power (watts):1500|h:Hours used per day:5:0.1|r:Rate (₹ per unit):8:0.1",
+ v=>`Units per month: ${f2(v.w*v.h*30/1000)} kWh<div class="big">₹${inr(v.w*v.h*30/1000*v.r)}</div>per month`,"kWh = watts × hours × 30 ÷ 1000");
+c2("average-price-calculator","Average Price Calculator","Money","🧮","Average buy price after buying twice.",["average","stock","buy","trading","share"],"q1:Quantity 1:10|p1:Price 1 (₹):100|q2:Quantity 2:20|p2:Price 2 (₹):90",
+ v=>v.q1+v.q2>0?`Average price<div class="big">₹${f2((v.q1*v.p1+v.q2*v.p2)/(v.q1+v.q2))}</div>Total quantity: ${v.q1+v.q2}, total cost: ₹${inr(v.q1*v.p1+v.q2*v.p2)}`:"Enter quantities.","Average = (q1×p1 + q2×p2) ÷ (q1 + q2). Educational only, not investment advice.");
+c2("position-size-calculator","Position Size Calculator","Money","🎚️","How many shares to buy for a fixed risk per trade.",["position","risk","trading","stoploss","quantity"],"c:Trading capital (₹):100000|r:Risk per trade (%):1:0.1|e:Entry price (₹):500|s:Stop-loss price (₹):490",
+ v=>v.e!==v.s?`Quantity<div class="big">${Math.floor(v.c*v.r/100/Math.abs(v.e-v.s)).toLocaleString("en-IN")}</div>Money at risk: ₹${f2(v.c*v.r/100)}<br>Position value: ₹${inr(Math.floor(v.c*v.r/100/Math.abs(v.e-v.s))*v.e)}`:"Entry and stop-loss cannot be the same.","Quantity = (capital × risk%) ÷ |entry − stop-loss|. Educational only; trading carries risk of loss.");
+c2("risk-reward-calculator","Risk Reward Calculator","Money","⚔️","Compare potential loss and gain on a trade.",["risk","reward","trading","target","stoploss"],"e:Entry price (₹):500|s:Stop-loss (₹):490|t:Target (₹):530",
+ v=>{const r=Math.abs(v.e-v.s),w=Math.abs(v.t-v.e);return r>0?`Risk: ₹${f2(r)} · Reward: ₹${f2(w)}<div class="big">1 : ${f2(w/r)}</div>`:"Entry and stop-loss cannot be the same."},"Ratio = reward ÷ risk. Educational only, not investment advice.");
+c2("profit-loss-calculator","Profit & Loss Calculator","Money","💹","Profit or loss on a buy and sell, before charges.",["profit","loss","stock","trade","sell"],"b:Buy price (₹):100|s:Sell price (₹):110|q:Quantity:50",
+ v=>{const p=(v.s-v.b)*v.q;return `${p>=0?"Profit":"Loss"}<div class="big">₹${inr(Math.abs(p))}</div>${f2((v.s-v.b)/v.b*100)}% on ₹${inr(v.b*v.q)}`},"P/L = (sell − buy) × quantity. Brokerage and taxes are not included.");
+c2("bmi-calculator","BMI Calculator","Health","🏃","Body mass index from weight and height.",["bmi","weight","health","fitness"],"w:Weight (kg):70:0.1|h:Height (cm):170",
+ v=>{const b=v.w/Math.pow(v.h/100,2);return `BMI<div class="big">${f2(b)}</div>${b<18.5?"Underweight":b<25?"Normal range":b<30?"Overweight":"Obese range"} (general adult ranges)`},"BMI = kg ÷ m². It is a rough guide and not a diagnosis. Ask a doctor for advice.");
+c2("bmr-calculator","BMR Calculator","Health","🔥","Calories your body burns at rest.",["bmr","calories","metabolism","diet"],"g:Gender (1 = male, 0 = female):1|w:Weight (kg):70:0.1|h:Height (cm):170|a:Age (years):25",
+ v=>{const b=10*v.w+6.25*v.h-5*v.a+(v.g?5:-161);return `BMR<div class="big">${inr(b)} kcal/day</div>Light activity: ${inr(b*1.375)} · Moderate: ${inr(b*1.55)}`},"Mifflin-St Jeor equation. An estimate only.");
+c2("water-intake-calculator","Water Intake Calculator","Health","💧","A rough daily water target.",["water","hydration","health"],"w:Weight (kg):70:0.1",
+ v=>`About <div class="big">${f2(v.w*.033)} litres/day</div>Needs vary with heat, activity and health.`,"Estimate = weight × 0.033 litres");
+c2("heart-rate-calculator","Heart Rate Zones","Health","❤️","Estimated maximum heart rate and training zones.",["heart","pulse","exercise","zones"],"a:Age (years):30",
+ v=>{const m=220-v.a;return `Max heart rate: <b>${m} bpm</b><br>Light: ${Math.round(m*.5)}–${Math.round(m*.6)} · Moderate: ${Math.round(m*.6)}–${Math.round(m*.7)} · Hard: ${Math.round(m*.7)}–${Math.round(m*.85)} bpm`},"Max = 220 − age. An estimate only.");
+c2("marks-percentage-calculator","Marks Percentage Calculator","Students","📝","Percentage from marks obtained and total.",["marks","percentage","exam","result"],"o:Marks obtained:450|t:Total marks:500",
+ v=>v.t>0?`Percentage<div class="big">${f2(v.o/v.t*100)}%</div>`:"Total marks must be above 0.","Percentage = obtained ÷ total × 100");
+c2("attendance-calculator","Attendance Calculator","Students","🏫","Check attendance and classes needed to reach the target.",["attendance","75","college","classes"],"a:Classes attended:60|t:Total classes held:80|g:Target attendance (%):75",
+ v=>{const p=v.a/v.t*100,g=v.g/100;return `Attendance: <b>${f2(p)}%</b><br>`+(p>=v.g?`You can miss up to <b>${Math.max(0,Math.floor(v.a/g-v.t))}</b> more classes and stay at ${v.g}%.`:`Attend the next <b>${Math.ceil((g*v.t-v.a)/(1-g))}</b> classes in a row to reach ${v.g}%.`)},"Needed = (target × held − attended) ÷ (1 − target)");
+c2("quadratic-equation-solver","Quadratic Equation Solver","Students","🧠","Solve ax² + bx + c = 0.",["quadratic","equation","math","roots"],"a:a:1|b:b:-3|c:c:2",
+ v=>{if(v.a===0)return"a cannot be 0.";const d=v.b*v.b-4*v.a*v.c;if(d>=0){const s=Math.sqrt(d);return `Roots: <b>${+((-v.b+s)/(2*v.a)).toFixed(6)}</b> and <b>${+((-v.b-s)/(2*v.a)).toFixed(6)}</b>`}return `No real roots. Complex: ${+(-v.b/(2*v.a)).toFixed(4)} ± ${+(Math.sqrt(-d)/(2*v.a)).toFixed(4)}i`},"x = (−b ± √(b² − 4ac)) ÷ 2a");
+c2("circle-calculator","Circle Calculator","Students","⭕","Area and circumference from radius.",["circle","area","radius","math"],"r:Radius:7:0.1",
+ v=>`Area: <b>${f2(Math.PI*v.r*v.r)}</b><br>Circumference: <b>${f2(2*Math.PI*v.r)}</b>`,"Area = πr²; circumference = 2πr");
+c2("rectangle-calculator","Rectangle Calculator","Students","▭","Area, perimeter and diagonal.",["rectangle","area","perimeter","math"],"l:Length:10:0.1|w:Width:5:0.1",
+ v=>`Area: <b>${f2(v.l*v.w)}</b><br>Perimeter: <b>${f2(2*(v.l+v.w))}</b><br>Diagonal: ${f2(Math.hypot(v.l,v.w))}`,"Area = l × w; perimeter = 2(l + w)");
+c2("triangle-area-calculator","Triangle Area Calculator","Students","△","Area from base and height.",["triangle","area","math"],"b:Base:10:0.1|h:Height:6:0.1",
+ v=>`Area<div class="big">${f2(v.b*v.h/2)}</div>`,"Area = ½ × base × height");
+c2("pythagoras-calculator","Pythagoras Calculator","Students","📐","Find the hypotenuse of a right triangle.",["pythagoras","hypotenuse","triangle"],"a:Side a:3:0.1|b:Side b:4:0.1",
+ v=>`Hypotenuse<div class="big">${f2(Math.hypot(v.a,v.b))}</div>`,"c = √(a² + b²)");
+c2("speed-distance-time-calculator","Speed Distance Time Calculator","Students","🏎️","Find speed from distance and time.",["speed","distance","time","physics"],"d:Distance (km):120|t:Time (hours):2:0.01",
+ v=>v.t>0?`Speed<div class="big">${f2(v.d/v.t)} km/h</div>${f2(v.d/v.t/3.6)} m/s`:"Time must be above 0.","Speed = distance ÷ time");
+c2("prime-number-checker","Prime Number Checker","Students","🔢","Check if a number is prime.",["prime","number","math"],"n:Number:97",
+ v=>{const n=v.n;if(!Number.isInteger(n)||n<2||n>1e12)return"Enter a whole number from 2 to 1,000,000,000,000.";for(let i=2;i*i<=n;i++)if(n%i===0)return `${n} is <b>not prime</b>. It is divisible by ${i}.`;return `${n} is <b>prime</b>.`},"Checks divisors up to √n");
+c2("factorial-calculator","Factorial Calculator","Students","❗","n! for whole numbers up to 170.",["factorial","math","permutation"],"n:Number:10",
+ v=>{if(!Number.isInteger(v.n)||v.n<0||v.n>170)return"Enter a whole number from 0 to 170.";let r=1n;for(let i=2n;i<=BigInt(v.n);i++)r*=i;const s=r.toString();return `${v.n}! = <div class="big" style="word-break:break-all">${s.length>40?s.slice(0,40)+"…":s}</div>${s.length} digits`},"n! = n × (n−1) × … × 1");
+c2("percentage-difference-calculator","Percentage Difference Calculator","Students","↔️","Percentage difference between two values.",["percent","difference","compare"],"a:First value:50|b:Second value:80",
+ v=>v.a+v.b!==0?`Difference<div class="big">${f2(Math.abs(v.a-v.b)/((v.a+v.b)/2)*100)}%</div>`:"Values cannot add up to 0.","|a − b| ÷ ((a + b) ÷ 2) × 100");
+c2("square-root-calculator","Square & Cube Root Calculator","Students","√","Roots, squares and cubes of a number.",["square root","cube root","math","power"],"n:Number:144:any",
+ v=>`√n = <b>${v.n>=0?+Math.sqrt(v.n).toPrecision(10):"not real"}</b><br>∛n = <b>${+Math.cbrt(v.n).toPrecision(10)}</b><br>n² = ${+(v.n*v.n).toPrecision(10)}<br>n³ = ${+(v.n**3).toPrecision(10)}`,"Roots, squares and cubes");
+c2("lorem-ipsum-generator","Lorem Ipsum Generator","Text Tools","📃","Placeholder text for designs and layouts.",["lorem","ipsum","dummy","text","placeholder"],"n:Paragraphs:3",
+ v=>{const W="lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat".split(" ");let o="";for(let p=0;p<Math.min(20,Math.max(1,v.n|0));p++){let s=[];for(let i=0;i<50;i++)s.push(W[(i*7+p*5)%W.length]);const t=s.join(" ");o+=`<p>${t[0].toUpperCase()+t.slice(1)}.</p>`}return o},"Placeholder text with no meaning");
+
+// ----- text tools -----
+function txt(slug,title,icon,desc,kw,fn,cat="Text Tools"){T.push({slug,title,cat,icon,desc,kw,faq:[["Is my text uploaded?","No. It stays in your browser."]],render(box){
+ box.innerHTML=`<label for="i">Your text</label><textarea id="i" rows="7" maxlength="100000"></textarea><label for="o">Result</label><textarea id="o" rows="7" readonly></textarea><button class="btn" id="cp">Copy result</button>`;
+ const run=()=>{try{$("#o").value=fn($("#i").value)}catch(e){$("#o").value="Could not process this input: "+String(e.message).slice(0,100)}};
+ $("#i").oninput=run;$("#cp").onclick=()=>{$("#o").select();navigator.clipboard.writeText($("#o").value).then(()=>{$("#cp").textContent="Copied!";setTimeout(()=>$("#cp").textContent="Copy result",1500)}).catch(()=>{})}}})}
+const lineMap=f=>s=>s.split("\n").map(l=>l.trim()?f(l.trim()):"").join("\n");
+txt("word-counter","Word Counter","🔤","Count words, characters, sentences and reading time.",["word","count","characters","essay"],s=>{const w=(s.trim().match(/\S+/g)||[]).length;return `Words: ${w}\nCharacters: ${s.length}\nCharacters (no spaces): ${s.replace(/\s/g,"").length}\nSentences: ${(s.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[]).filter(x=>x.trim()).length}\nParagraphs: ${s.split(/\n\s*\n/).filter(x=>x.trim()).length}\nReading time: ${Math.max(w?1:0,Math.ceil(w/200))} min`});
+txt("character-counter","Character Counter (X, Instagram, SMS)","🔡","Check text length against common limits.",["character","count","twitter","instagram","sms","limit"],s=>`Characters: ${s.length}\nX (Twitter) 280: ${280-s.length} left\nInstagram caption 2,200: ${2200-s.length} left\nSMS segments (160 each): ${Math.ceil(s.length/160)}`);
+txt("uppercase-converter","UPPERCASE Converter","🅰️","Change text to capital letters.",["uppercase","capital","case"],s=>s.toUpperCase());
+txt("lowercase-converter","lowercase Converter","🔠","Change text to small letters.",["lowercase","small","case"],s=>s.toLowerCase());
+txt("title-case-converter","Title Case Converter","🅱️","Capitalise the first letter of every word.",["title","case","capitalize"],s=>s.toLowerCase().replace(/(^|\s|[-(])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()));
+txt("sentence-case-converter","Sentence Case Converter","🆎","Capitalise the start of each sentence.",["sentence","case","capitalize"],s=>s.toLowerCase().replace(/(^\s*|[.!?]\s+)(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()));
+txt("remove-extra-spaces","Remove Extra Spaces","🧹","Clean double spaces and blank edges.",["space","clean","trim"],s=>s.replace(/[ \t]+/g," ").replace(/^ +| +$/gm,""));
+txt("remove-line-breaks","Remove Line Breaks","↩️","Join broken lines into one paragraph (great after copying from a PDF).",["line break","join","pdf","paragraph"],s=>s.replace(/\s*\n+\s*/g," ").trim());
+txt("remove-duplicate-lines","Remove Duplicate Lines","♻️","Keep only unique lines.",["duplicate","unique","lines","list"],s=>[...new Set(s.split("\n"))].join("\n"));
+txt("sort-lines","Sort Lines A–Z","🔀","Sort a list alphabetically.",["sort","alphabetical","list","lines"],s=>s.split("\n").sort((a,b)=>a.localeCompare(b)).join("\n"));
+txt("reverse-text","Reverse Text","🪞","Flip text backwards.",["reverse","flip","mirror"],s=>[...s].reverse().join(""));
+txt("add-line-numbers","Add Line Numbers","🔢","Number every line.",["line","numbers","list"],s=>s.split("\n").map((l,i)=>`${i+1}. ${l}`).join("\n"));
+txt("text-to-slug","Text to URL Slug","🔗","Make a clean URL slug from a title.",["slug","url","seo","permalink"],s=>s.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g,"").trim().replace(/[\s_-]+/g,"-"),"Developer");
+txt("base64-encode","Base64 Encode","🔐","Encode text to Base64.",["base64","encode"],s=>{let b="";new TextEncoder().encode(s).forEach(x=>b+=String.fromCharCode(x));return btoa(b)},"Developer");
+txt("base64-decode","Base64 Decode","🔓","Decode Base64 back to text.",["base64","decode"],s=>new TextDecoder().decode(Uint8Array.from(atob(s.trim()),c=>c.charCodeAt(0))),"Developer");
+txt("url-encode","URL Encoder","🌐","Percent-encode text for URLs.",["url","encode","percent"],s=>encodeURIComponent(s),"Developer");
+txt("url-decode","URL Decoder","🌍","Decode percent-encoded text.",["url","decode","percent"],s=>decodeURIComponent(s),"Developer");
+txt("json-formatter","JSON Formatter","🧾","Pretty-print and validate JSON.",["json","format","validate","beautify"],s=>JSON.stringify(JSON.parse(s),null,2),"Developer");
+txt("json-minifier","JSON Minifier","🗜️","Remove spaces from JSON.",["json","minify","compress"],s=>JSON.stringify(JSON.parse(s)),"Developer");
+txt("html-escape","HTML Escape","🏷️","Escape &, <, > and quotes for safe HTML.",["html","escape","entities"],s=>esc(s),"Developer");
+txt("text-to-binary","Text to Binary","💻","Convert text to 8-bit binary.",["binary","text","encode"],s=>[...new TextEncoder().encode(s)].map(b=>b.toString(2).padStart(8,"0")).join(" "),"Developer");
+txt("binary-to-text","Binary to Text","🖥️","Convert 8-bit binary back to text.",["binary","text","decode"],s=>new TextDecoder().decode(Uint8Array.from(s.trim().split(/\s+/).map(b=>parseInt(b,2)))),"Developer");
+const MO=Object.fromEntries("A .-,B -...,C -.-.,D -..,E .,F ..-.,G --.,H ....,I ..,J .---,K -.-,L .-..,M --,N -.,O ---,P .--.,Q --.-,R .-.,S ...,T -,U ..-,V ...-,W .--,X -..-,Y -.--,Z --..,0 -----,1 .----,2 ..---,3 ...--,4 ....-,5 .....,6 -....,7 --...,8 ---..,9 ----.".split(",").map(x=>x.split(" ")));
+txt("morse-code-translator","Morse Code Translator","📡","Convert text to Morse code.",["morse","code","translate"],s=>s.toUpperCase().split(/\s+/).map(w=>[...w].map(c=>MO[c]||"").join(" ")).join(" / "));
+const O="zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split(" "),TY="__ __ twenty thirty forty fifty sixty seventy eighty ninety".split(" ");
+const two=n=>n<20?O[n]:TY[n/10|0]+(n%10?"-"+O[n%10]:"");
+const three=n=>(n>99?O[n/100|0]+" hundred"+(n%100?" and ":""):"")+(n%100?two(n%100):"");
+const n2w=n=>{if(n===0)return"zero";let r=[];for(const[v,nm]of[[1e7,"crore"],[1e5,"lakh"],[1e3,"thousand"]]){const q=Math.floor(n/v);if(q){r.push(three(q)+" "+nm);n%=v}}if(n)r.push(three(n));return r.join(" ")};
+txt("number-to-words","Number to Words (Indian)","💬","Write amounts in words using lakh and crore, useful for cheques.",["number","words","cheque","amount","rupees","lakh","crore"],lineMap(l=>/^\d{1,10}$/.test(l)?n2w(+l)+" only":"Enter a whole number up to 9,99,99,99,999"));
+const RM=[[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];
+const toR=n=>{let r="";for(const[v,s]of RM)while(n>=v){r+=s;n-=v}return r};
+const fromR=s=>{const m={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};let t=0;s=s.toUpperCase();for(let i=0;i<s.length;i++){const a=m[s[i]],b=m[s[i+1]]||0;t+=a<b?-a:a}return t};
+txt("roman-numeral-converter","Roman Numeral Converter","🏛️","Numbers to Roman numerals and back.",["roman","numeral","number"],lineMap(l=>/^\d+$/.test(l)&&+l>=1&&+l<=3999?toR(+l):/^[IVXLCDM]+$/i.test(l)?String(fromR(l)):"Enter 1–3999 or a Roman numeral"));
+txt("palindrome-checker","Palindrome Checker","🪞","Check if words or phrases read the same backwards.",["palindrome","word","check"],lineMap(l=>{const c=l.toLowerCase().replace(/[^\p{L}\p{N}]/gu,"");return c&&c===[...c].reverse().join("")?"Yes, palindrome: "+l:"No: "+l}));
+txt("email-extractor","Email Extractor","📧","Pull email addresses out of any text.",["email","extract","find"],s=>[...new Set(s.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g)||[])].join("\n")||"No email addresses found.");
+const nums=s=>(s.match(/-?\d+(\.\d+)?/g)||[]).map(Number);
+txt("average-median-mode","Average, Median & Mode","📊","Statistics for a list of numbers.",["average","mean","median","mode","statistics"],s=>{const a=nums(s);if(!a.length)return"Enter numbers separated by spaces, commas or new lines.";const t=[...a].sort((x,y)=>x-y),n=t.length,sum=a.reduce((x,y)=>x+y,0),f={};a.forEach(x=>f[x]=(f[x]||0)+1);const mx=Math.max(...Object.values(f));return `Count: ${n}\nSum: ${+sum.toFixed(6)}\nAverage: ${+(sum/n).toFixed(6)}\nMedian: ${n%2?t[(n-1)/2]:(t[n/2-1]+t[n/2])/2}\nMode: ${mx>1?Object.keys(f).filter(k=>f[k]===mx).join(", "):"none"}\nMin: ${t[0]}  Max: ${t[n-1]}`},"Students");
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+txt("hcf-lcm-calculator","HCF & LCM Calculator","🧮","Highest common factor and least common multiple.",["hcf","lcm","gcd","factor","multiple"],s=>{const a=nums(s).filter(x=>Number.isInteger(x)&&x>0);if(a.length<2)return"Enter two or more positive whole numbers.";const g=a.reduce(gcd),l=a.reduce((x,y)=>x/gcd(x,y)*y);return `HCF: ${g}\nLCM: ${l}`},"Students");
+const GP={"A+":4,A:4,"A-":3.7,"B+":3.3,B:3,"B-":2.7,"C+":2.3,C:2,"C-":1.7,"D+":1.3,D:1,F:0};
+txt("gpa-calculator","GPA Calculator (4.0 scale)","🎓","One course per line: grade then credits, like “A 3”.",["gpa","grade","credits","college"],s=>{let p=0,c=0;for(const l of s.split("\n")){const m=l.trim().toUpperCase().match(/^([A-D][+-]?|F)\s+(\d+(\.\d+)?)$/);if(m&&GP[m[1]]!==undefined){p+=GP[m[1]]*+m[2];c+=+m[2]}}return c?`GPA: ${(p/c).toFixed(2)}\nTotal credits: ${c}`:"Type one course per line, for example:\nA 3\nB+ 4\nC 2"},"Students");
+
+// ----- date tools -----
+const today=()=>new Date().toISOString().slice(0,10),D=s=>new Date(s+"T00:00:00"),DN="Sunday Monday Tuesday Wednesday Thursday Friday Saturday".split(" ");
+function dc(slug,title,icon,desc,kw,fs,fn){T.push({slug,title,cat:"Everyday Tools",icon,desc,kw,faq:[["Is my date stored?","No. Everything stays in your browser."]],render(box){
+ box.innerHTML=fs.map(f=>`<label for="${f[0]}">${f[1]}</label><input id="${f[0]}" type="${f[2]}" value="${f[3]}">`).join("")+`<div class="res" id="out" aria-live="polite"></div>`;
+ const run=()=>{const v={};for(const f of fs)v[f[0]]=$("#"+f[0]).value;$("#out").innerHTML=fs.some(f=>!v[f[0]])?"Fill in all fields.":fn(v)};box.addEventListener("input",run);run()}})}
+dc("age-calculator","Age Calculator","🎂","Exact age in years, months and days.",["age","birthday","dob","birth"],[["b","Date of birth","date","2000-01-01"],["t","Age on","date",today()]],v=>{const a=D(v.b),b=D(v.t);if(a>b)return"Birth date is after the chosen date.";let y=b.getFullYear()-a.getFullYear(),m=b.getMonth()-a.getMonth(),d=b.getDate()-a.getDate();if(d<0){m--;d+=new Date(b.getFullYear(),b.getMonth(),0).getDate()}if(m<0){y--;m+=12}
+ let nb=new Date(b.getFullYear(),a.getMonth(),a.getDate());if(nb<b)nb.setFullYear(b.getFullYear()+1);return `<div class="big">${y} years, ${m} months, ${d} days</div>Total days: ${Math.round((b-a)/864e5).toLocaleString("en-IN")}<br>Next birthday in ${Math.round((nb-b)/864e5)} days`});
+dc("days-between-dates","Days Between Dates","📅","Count days between two dates.",["days","between","dates","difference"],[["a","From","date",today()],["b","To","date",today()]],v=>{const n=Math.round((D(v.b)-D(v.a))/864e5);return `<div class="big">${Math.abs(n).toLocaleString("en-IN")} days</div>${Math.floor(Math.abs(n)/7)} weeks and ${Math.abs(n)%7} days · about ${f2(Math.abs(n)/30.4375)} months`});
+dc("add-days-to-date","Add or Subtract Days","➕","Find the date after some days (use a minus for earlier).",["add","days","date","deadline","due"],[["s","Start date","date",today()],["n","Days to add","number","30"]],v=>{const d=D(v.s);d.setDate(d.getDate()+ +v.n);return `<div class="big">${d.toDateString()}</div>`});
+dc("weekday-finder","Day of the Week Finder","🗓️","Which weekday was or will be a date?",["weekday","day","date","finder"],[["d","Date","date",today()]],v=>`<div class="big">${DN[D(v.d).getDay()]}</div>`);
+
+// ----- generators & utilities -----
+T.push({slug:"password-generator",title:"Password Generator",cat:"Developer",icon:"🔑",desc:"Create strong random passwords. Nothing is sent anywhere.",kw:["password","random","secure","generator"],faq:[["Is it safe?","Passwords are made in your browser with its secure random generator and never sent anywhere."],["How long should a password be?","At least 14 characters, and a different one for every site."]],render(box){
+ box.innerHTML=`<label for="n">Length: <span id="nv">16</span></label><input id="n" type="range" min="8" max="64" value="16"><label><input type="checkbox" id="u" checked style="width:auto"> Uppercase</label><label><input type="checkbox" id="l" checked style="width:auto"> Lowercase</label><label><input type="checkbox" id="d" checked style="width:auto"> Numbers</label><label><input type="checkbox" id="s" checked style="width:auto"> Symbols</label>
+ <div class="res" style="word-break:break-all;font-family:monospace;font-size:20px" id="out"></div><p id="st" class="note"></p><button class="btn" id="g">Generate new</button> <button class="btn" id="cp">Copy</button><p class="err" id="e" role="alert"></p>`;
+ const gen=()=>{$("#nv").textContent=$("#n").value;let p="";if($("#u").checked)p+="ABCDEFGHJKLMNPQRSTUVWXYZ";if($("#l").checked)p+="abcdefghijkmnopqrstuvwxyz";if($("#d").checked)p+="23456789";if($("#s").checked)p+="!@#$%^&*()-_=+?";
+  if(!p){$("#e").textContent="Choose at least one character type.";return}$("#e").textContent="";let o="";for(let i=0;i<+$("#n").value;i++)o+=p[rnd(p.length)];$("#out").textContent=o;const b=Math.round($("#n").value*Math.log2(p.length));$("#st").textContent=`Strength: about ${b} bits (${b<50?"weak":b<75?"fair":b<100?"strong":"very strong"})`};
+ box.addEventListener("input",gen);$("#g").onclick=gen;$("#cp").onclick=()=>navigator.clipboard.writeText($("#out").textContent).then(()=>{$("#cp").textContent="Copied!";setTimeout(()=>$("#cp").textContent="Copy",1500)}).catch(()=>{});gen()}});
+T.push({slug:"random-number-generator",title:"Random Number Generator",cat:"Everyday Tools",icon:"🎲",desc:"Pick random numbers between two values.",kw:["random","number","lottery","pick"],faq:[["Is it truly random?","It uses your browser's secure random generator."]],render(box){
+ box.innerHTML=`<div class="row"><div><label for="a">From</label><input id="a" type="number" value="1"></div><div><label for="b">To</label><input id="b" type="number" value="100"></div><div><label for="c">How many</label><input id="c" type="number" min="1" max="100" value="1"></div></div><button class="btn" id="g">Generate</button><div class="res big" id="out" aria-live="polite">–</div>`;
+ $("#g").onclick=()=>{const a=Math.ceil(+$("#a").value),b=Math.floor(+$("#b").value),c=Math.min(100,Math.max(1,+$("#c").value|0));if(b<a)return $("#out").textContent="“To” must be at least “From”.";$("#out").textContent=Array.from({length:c},()=>a+rnd(b-a+1)).join(", ")}}});
+T.push({slug:"dice-and-coin",title:"Dice & Coin Flip",cat:"Everyday Tools",icon:"🪙",desc:"Flip a coin or roll a die.",kw:["dice","coin","flip","roll","toss"],faq:[["Is it fair?","Yes, each outcome is equally likely."]],render(box){
+ box.innerHTML=`<button class="btn" id="c">Flip coin</button> <button class="btn" id="d6">Roll d6</button> <button class="btn" id="d20">Roll d20</button><div class="res big" id="out" aria-live="polite">–</div>`;
+ $("#c").onclick=()=>$("#out").textContent=rnd(2)?"Heads":"Tails";$("#d6").onclick=()=>$("#out").textContent=1+rnd(6);$("#d20").onclick=()=>$("#out").textContent=1+rnd(20)}});
+T.push({slug:"uuid-generator",title:"UUID Generator",cat:"Developer",icon:"🆔",desc:"Generate random UUID v4 identifiers.",kw:["uuid","guid","id","random","developer"],faq:[["What is a UUID?","A 128-bit identifier that is practically unique."]],render(box){
+ box.innerHTML=`<label for="n">How many (1–50)</label><input id="n" type="number" min="1" max="50" value="5"><button class="btn" id="g">Generate</button><textarea id="o" rows="8" readonly style="margin-top:12px"></textarea>`;
+ const u=()=>crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=rnd(16);return(c==="x"?r:r&3|8).toString(16)});
+ $("#g").onclick=()=>$("#o").value=Array.from({length:Math.min(50,Math.max(1,+$("#n").value|0))},u).join("\n");$("#g").click()}});
+T.push({slug:"random-name-picker",title:"Random Name Picker",cat:"Everyday Tools",icon:"🎯",desc:"Pick a winner from a list, one name per line.",kw:["random","picker","winner","giveaway","draw"],faq:[["Is it fair?","Every line has the same chance."]],render(box){
+ box.innerHTML=`<label for="l">Names (one per line)</label><textarea id="l" rows="7" maxlength="20000"></textarea><button class="btn" id="g">Pick one</button><div class="res big" id="out" aria-live="polite">–</div>`;
+ $("#g").onclick=()=>{const a=$("#l").value.split("\n").map(x=>x.trim()).filter(Boolean);$("#out").textContent=a.length?a[rnd(a.length)]:"Add some names first."}}});
+const hx=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h.trim());return m?[0,2,4].map(i=>parseInt(m[1].substr(i,2),16)):null};
+T.push({slug:"color-converter",title:"Color Converter (HEX, RGB, HSL)",cat:"Developer",icon:"🎨",desc:"Pick a colour and get its HEX, RGB and HSL values.",kw:["color","colour","hex","rgb","hsl","picker"],faq:[["What is HEX?","A 6-digit code like #E07A1F for the red, green and blue parts."]],render(box){
+ box.innerHTML=`<label for="p">Pick a colour</label><input id="p" type="color" value="#e07a1f" style="height:48px"><label for="h">or type HEX</label><input id="h" value="#e07a1f" maxlength="7"><div id="sw" style="height:60px;border-radius:10px;margin-top:12px;border:1px solid var(--line)"></div><div class="res" id="out" aria-live="polite"></div>`;
+ const show=h=>{const c=hx(h);if(!c)return $("#out").textContent="Enter a 6-digit HEX like #E07A1F.";const[r,g,b]=c.map(x=>x/255),mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn,l=(mx+mn)/2;let H=0;if(d){H=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;H=(H*60+360)%360}const S=d?d/(1-Math.abs(2*l-1)):0;
+  $("#sw").style.background=h.startsWith("#")?h:"#"+h;$("#out").innerHTML=`HEX: <b>#${h.replace("#","").toUpperCase()}</b><br>RGB: <b>rgb(${c.join(", ")})</b><br>HSL: <b>hsl(${Math.round(H)}, ${Math.round(S*100)}%, ${Math.round(l*100)}%)</b>`};
+ $("#p").oninput=e=>{$("#h").value=e.target.value;show(e.target.value)};$("#h").oninput=e=>{if(hx(e.target.value))$("#p").value="#"+e.target.value.replace("#","");show(e.target.value)};show("#e07a1f")}});
+T.push({slug:"sha256-hash-generator",title:"SHA-256 Hash Generator",cat:"Developer",icon:"#️⃣",desc:"Create a SHA-256 hash of any text.",kw:["sha","hash","sha256","checksum","developer"],faq:[["Is the text uploaded?","No. It is hashed in your browser."]],render(box){
+ box.innerHTML=`<label for="i">Text</label><textarea id="i" rows="5"></textarea><label for="o">SHA-256</label><textarea id="o" rows="3" readonly></textarea>`;
+ $("#i").oninput=async()=>{if(!(window.crypto&&crypto.subtle))return $("#o").value="Hashing needs a secure (https) page.";const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode($("#i").value));$("#o").value=[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("")};$("#i").oninput()}});
+T.push({slug:"unix-timestamp-converter",title:"Unix Timestamp Converter",cat:"Developer",icon:"🕰️",desc:"Convert Unix time to a readable date and back.",kw:["unix","timestamp","epoch","date","time"],faq:[["Seconds or milliseconds?","13-digit values are treated as milliseconds, shorter ones as seconds."]],render(box){
+ box.innerHTML=`<label for="t">Unix timestamp</label><input id="t" type="number"><button class="btn" id="nw">Use current time</button><div class="res" id="o1" aria-live="polite"></div><label for="d">Date and time to timestamp</label><input id="d" type="datetime-local"><div class="res" id="o2" aria-live="polite"></div>`;
+ $("#t").oninput=()=>{const v=+$("#t").value;if(!$("#t").value)return $("#o1").textContent="";const d=new Date(String($("#t").value).length>=13?v:v*1000);$("#o1").innerHTML=isNaN(d)?"Not a valid time.":`UTC: <b>${d.toISOString()}</b><br>Local: <b>${d.toString().slice(0,33)}</b>`};
+ $("#nw").onclick=()=>{$("#t").value=Math.floor(Date.now()/1000);$("#t").oninput()};
+ $("#d").oninput=()=>{const d=new Date($("#d").value);$("#o2").innerHTML=isNaN(d)?"":`Seconds: <b>${Math.floor(d/1000)}</b><br>Milliseconds: <b>${d.getTime()}</b>`};$("#nw").click()}});
+function timer(slug,title,icon,mins,desc,kw){T.push({slug,title,cat:"Everyday Tools",icon,desc,kw,faq:[["Does it work in the background?","Keep this tab open. Some phones pause timers when the screen is off."]],render(box){
+ box.innerHTML=`<label for="m">Minutes</label><input id="m" type="number" min="1" max="600" value="${mins}"><div class="res big" id="t" style="text-align:center;font-size:48px" aria-live="polite">00:00</div><button class="btn" id="s">Start</button> <button class="btn" id="r">Reset</button>`;
+ let left=0,run=false,end=0;const show=()=>{const t=Math.max(0,Math.ceil(left));$("#t").textContent=String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0")};
+ const reset=()=>{clearInterval(window.__iv);run=false;left=(+$("#m").value||mins)*60;$("#s").textContent="Start";show()};$("#m").oninput=reset;$("#r").onclick=reset;
+ $("#s").onclick=()=>{if(run){clearInterval(window.__iv);run=false;$("#s").textContent="Resume";return}if(left<=0)left=(+$("#m").value||mins)*60;run=true;$("#s").textContent="Pause";end=Date.now()+left*1000;
+  window.__iv=setInterval(()=>{left=(end-Date.now())/1000;show();if(left<=0){clearInterval(window.__iv);run=false;left=0;$("#t").textContent="Time's up!";$("#s").textContent="Start";beep()}},250)};reset()}})}
+timer("pomodoro-timer","Pomodoro Timer","🍅",25,"Focus for 25 minutes, then take a break.",["pomodoro","focus","study","timer"]);
+timer("countdown-timer","Countdown Timer","⏲️",10,"Set minutes and count down to zero.",["countdown","timer","alarm","minutes"]);
+T.push({slug:"stopwatch",title:"Stopwatch",cat:"Everyday Tools",icon:"⏱️",desc:"Simple stopwatch with lap times.",kw:["stopwatch","timer","lap","time"],faq:[["Does it keep running if I switch tabs?","Time stays correct, but keep the tab open."]],render(box){
+ box.innerHTML=`<div class="res big" id="t" style="text-align:center;font-size:48px" aria-live="off">00:00.0</div><button class="btn" id="s">Start</button> <button class="btn" id="l" disabled>Lap</button> <button class="btn" id="r">Reset</button><ol id="o"></ol>`;
+ let st=0,acc=0,run=false;const fmt=ms=>{const t=Math.floor(ms/100),m=Math.floor(t/600),s=Math.floor(t/10)%60;return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")+"."+t%10},now=()=>acc+(run?Date.now()-st:0);
+ $("#s").onclick=()=>{if(run){acc=now();run=false;clearInterval(window.__iv);$("#s").textContent="Resume";$("#l").disabled=true}else{st=Date.now();run=true;$("#s").textContent="Stop";$("#l").disabled=false;window.__iv=setInterval(()=>$("#t").textContent=fmt(now()),50)}};
+ $("#l").onclick=()=>$("#o").insertAdjacentHTML("afterbegin",`<li>${fmt(now())}</li>`);
+ $("#r").onclick=()=>{clearInterval(window.__iv);run=false;acc=0;$("#t").textContent="00:00.0";$("#s").textContent="Start";$("#l").disabled=true;$("#o").innerHTML=""}}});
+T.push({slug:"todo-list",title:"To-Do List",cat:"Students",icon:"✅",desc:"A simple task list saved in your browser.",kw:["todo","tasks","list","planner","assignment"],faq:[["Where is it saved?","Only in this browser on this device. Clearing browser data removes it."]],render(box){
+ box.innerHTML=`<div class="row"><input id="t" maxlength="120" placeholder="Add a task…"><button class="btn" id="a" style="flex:0 0 auto;margin:0">Add</button></div><ul id="l" style="list-style:none;padding:0"></ul><p id="c" class="note"></p>`;
+ let a=ls.get("todo",[]);const draw=()=>{$("#l").innerHTML=a.map((x,i)=>`<li class="card" style="margin-top:8px;display:flex;gap:10px;align-items:center"><input type="checkbox" data-t="${i}" ${x.d?"checked":""} style="width:auto"><span style="flex:1;${x.d?"text-decoration:line-through;opacity:.6":""}">${esc(x.t)}</span><button class="chip" data-x="${i}" aria-label="Delete task">✕</button></li>`).join("");$("#c").textContent=a.length?`${a.filter(x=>x.d).length} of ${a.length} done`:"No tasks yet. Add your first one above.";ls.set("todo",a)};
+ const add=()=>{const v=$("#t").value.trim();if(v){a.push({t:v,d:0});$("#t").value="";draw()}};$("#a").onclick=add;$("#t").onkeydown=e=>{if(e.key==="Enter")add()};
+ $("#l").onclick=e=>{const i=e.target.dataset;if(i.x!==undefined){a.splice(+i.x,1);draw()}else if(i.t!==undefined){a[+i.t].d^=1;draw()}};draw()}});
+T.push({slug:"notes-organizer",title:"Notes Organizer",cat:"Students",icon:"🗒️",desc:"Save short notes with tags and filter them. Stored in your browser.",kw:["notes","organizer","study","tags","notebook"],faq:[["Where are notes stored?","Only in this browser on this device. Back up important notes elsewhere."]],render(box){
+ box.innerHTML=`<label for="ti">Title</label><input id="ti" maxlength="80"><label for="tg">Tag (like Maths)</label><input id="tg" maxlength="30"><label for="tx">Note</label><textarea id="tx" rows="4" maxlength="3000"></textarea><button class="btn" id="sv">Save note</button><label for="f">Show tag</label><select id="f"></select><div id="l"></div>`;
+ let a=ls.get("notes",[]);const draw=()=>{const tags=[...new Set(a.map(x=>x.g).filter(Boolean))],cur=$("#f").value||"All";$("#f").innerHTML=["All",...tags].map(t=>`<option ${t===cur?"selected":""}>${esc(t)}</option>`).join("");
+  const sh=a.map((x,i)=>[x,i]).filter(([x])=>$("#f").value==="All"||x.g===$("#f").value);$("#l").innerHTML=sh.map(([x,i])=>`<div class="card" style="margin-top:10px"><b>${esc(x.t||"Untitled")}</b> ${x.g?`<span class="chip">${esc(x.g)}</span>`:""}<p style="white-space:pre-wrap">${esc(x.x)}</p><button class="chip" data-x="${i}">Delete</button></div>`).join("")||"<p class='note'>No notes yet.</p>";ls.set("notes",a)};
+ $("#sv").onclick=()=>{if(!$("#tx").value.trim()&&!$("#ti").value.trim())return;a.unshift({t:$("#ti").value.trim(),g:$("#tg").value.trim(),x:$("#tx").value});$("#ti").value=$("#tg").value=$("#tx").value="";draw()};
+ $("#f").onchange=draw;$("#l").onclick=e=>{if(e.target.dataset.x!==undefined){a.splice(+e.target.dataset.x,1);draw()}};draw()}});
+
+// ---------- Router / pages ----------
+const cats=["Documents","Jobs & Career","Money","Students","Health","Converters","Text Tools","Developer","Everyday Tools"];
+const app=$("#app");
+function home(){
+  clearInterval(window.__iv);
+  app.innerHTML=`<h1>Your everyday digital toolkit</h1><p class="sub">Useful tools for documents, money, jobs, study and everyday digital work — all in one place.</p>
+  <input id="q" type="search" aria-label="Search tools" placeholder="Search for a tool..." style="margin-top:20px"><div class="chips" id="ch"></div><div class="grid" id="g"></div>`;
+  let cat="";const draw=()=>{const s=$("#q").value.trim().toLowerCase();
+   const l=T.filter(t=>(!cat||t.cat===cat)&&(!s||[t.title,t.cat,...t.kw].join(" ").toLowerCase().includes(s)));
+   $("#g").innerHTML=l.map(t=>`<a class="card" href="#/t/${t.slug}"><div class="ico">${t.icon}</div><h2>${t.title}</h2><span style="font-size:14px;opacity:.75">${t.desc}</span></a>`).join("")||`<p>No tool matches “${s.replace(/[<>&"]/g,"")}”. Try “pdf” or “loan”.</p>`;
+   $("#ch").innerHTML=cats.map(c=>`<button class="chip ${c===cat?"on":""}" data-c="${c}">${c}</button>`).join("")};
+  $("#q").oninput=draw;$("#ch").onclick=e=>{const c=e.target.dataset.c;if(c){cat=cat===c?"":c;draw()}};draw();
+  document.title="LifeOS – Your everyday digital toolkit";
+}
+function tool(slug){
+  clearInterval(window.__iv);
+  const t=T.find(x=>x.slug===slug);
+  if(!t){app.innerHTML=`<p>Tool not found. <a href="#/">Back to all tools</a></p>`;return}
+  document.title=t.title+" – Free online | LifeOS";
+  app.innerHTML=`<p><a href="#/">← All tools</a></p><h1 style="font-size:clamp(26px,5vw,36px)">${t.title}</h1><p class="sub" style="font-size:16px">${t.desc}</p><div id="box"></div>
+  <section style="margin-top:36px"><h2>FAQ</h2>${t.faq.map(f=>`<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</section>`;
+  t.render($("#box"));window.scrollTo(0,0);
+}
+function route(){const h=location.hash,m=h.match(/^#\/t\/([\w-]+)/);if(m)tool(m[1]);else if(h==='#/privacy')legal('privacy');else if(h==='#/terms')legal('terms');else home()}
+addEventListener("hashchange",route);route();
+</script>
+</body>
+</html>
